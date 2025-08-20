@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Credit Check Test</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 600px;
+            margin: 50px auto;
+            padding: 20px;
+            background-color: #f8f9fa;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        h1 {
+            color: #2c3e50;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #34495e;
+        }
+        input[type="text"] {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e1e8ed;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+            box-sizing: border-box;
+        }
+        input[type="text"]:focus {
+            outline: none;
+            border-color: #007bff;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 14px 28px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            width: 100%;
+            transition: background-color 0.3s;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        button:disabled {
+            background: #6c757d;
+            cursor: not-allowed;
+        }
+        .result {
+            margin-top: 30px;
+            padding: 20px;
+            border-radius: 8px;
+            display: none;
+        }
+        .result.success {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+        }
+        .result.error {
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+        }
+        .result pre {
+            background: rgba(0,0,0,0.1);
+            padding: 15px;
+            border-radius: 6px;
+            overflow-x: auto;
+            white-space: pre-wrap;
+        }
+        .loading {
+            text-align: center;
+            color: #6c757d;
+            font-style: italic;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 Credit Check API Test</h1>
+        
+        <form id="creditCheckForm">
+            <div class="form-group">
+                <label for="customer_id">Customer ID (Lightspeed UUID):</label>
+                <input type="text" id="customer_id" name="customer_id" 
+                       placeholder="e.g., 123e4567-e89b-12d3-a456-426614174000" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="purchase_order">Purchase Order ID:</label>
+                <input type="text" id="purchase_order" name="purchase_order" 
+                       placeholder="e.g., PO-2024-001" required>
+            </div>
+            
+            <button type="submit" id="submitBtn">Run Credit Check</button>
+        </form>
+        
+        <div id="result" class="result"></div>
+    </div>
+
+    <script>
+        document.getElementById('creditCheckForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const submitBtn = document.getElementById('submitBtn');
+            const resultDiv = document.getElementById('result');
+            
+            // Get form data
+            const customer_id = document.getElementById('customer_id').value;
+            const purchase_order = document.getElementById('purchase_order').value;
+            
+            // Show loading state
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Running Credit Check...';
+            resultDiv.style.display = 'block';
+            resultDiv.className = 'result';
+            resultDiv.innerHTML = '<div class="loading">Running credit check...</div>';
+            
+            try {
+                // Make API call to your Shopify App Proxy
+                const response = await fetch('/apps/ext/creditCheck', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        customer_id: customer_id,
+                        purchase_order: purchase_order
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    resultDiv.className = 'result success';
+                    resultDiv.innerHTML = `
+                        <h3>✅ Credit Check Successful!</h3>
+                        <p><strong>Request Data:</strong></p>
+                        <ul>
+                            <li>Customer ID: ${data.request_data.customer_id}</li>
+                            <li>Purchase Order: ${data.request_data.purchase_order}</li>
+                            <li>Timestamp: ${data.timestamp}</li>
+                        </ul>
+                        <p><strong>API Response:</strong></p>
+                        <pre>${JSON.stringify(data.credit_check, null, 2)}</pre>
+                    `;
+                } else {
+                    resultDiv.className = 'result error';
+                    resultDiv.innerHTML = `
+                        <h3>❌ Credit Check Failed</h3>
+                        <p><strong>Error:</strong> ${data.error || 'Unknown error'}</p>
+                        <p><strong>Details:</strong> ${data.details || 'No details provided'}</p>
+                    `;
+                }
+                
+            } catch (error) {
+                resultDiv.className = 'result error';
+                resultDiv.innerHTML = `
+                    <h3>❌ Network Error</h3>
+                    <p><strong>Error:</strong> ${error.message}</p>
+                    <p>Make sure your app server is running and accessible.</p>
+                `;
+            } finally {
+                // Reset button state
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Run Credit Check';
+            }
+        });
+    </script>
+</body>
+</html>
