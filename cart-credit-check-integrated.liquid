@@ -200,8 +200,8 @@
           cart_total: orderTotal
         });
         
-        // Call the working test API endpoint
-        const response = await fetch(`${appUrl}/test/creditCheck`, {
+        // Call the working credit check API endpoint
+        const response = await fetch(`${appUrl}/proxy/creditCheck`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -497,11 +497,13 @@
     async function generateDiscountCode(customerId, purchaseOrder, cartTotal) {
       // This function will call the new discount generation API
       // when we implement it later
+      // Endpoint: /proxy/generate-discount
     }
     
     async function applyDiscountToCart(discountCode, cartToken) {
       // This function will apply the generated discount code
       // to the cart when we implement it later
+      // Endpoint: /proxy/apply-discount-code
     }
     */
   </script>
