@@ -401,9 +401,8 @@ app.listen(port, () => {
   console.log(`🚀 ESND Credit Check API running on port ${port}`);
   console.log('✅ Available endpoints:');
   console.log('   - GET / (health check)');
-  console.log('   - POST /api/credit-check');
-  console.log('   - POST /api/generate-discount');
-  console.log('   - POST /api/apply-discount-code');
   console.log('   - POST /test/creditCheck');
+  console.log('   - POST /test/generate-discount');
+  console.log('   - POST /test/apply-discount-code');
   console.log('   - POST /proxy/* (Shopify app proxy)');
 });
