@@ -130,7 +130,7 @@ app.post('/api/credit-check', async (req, res) => {
 });
 
 // Shopify App Integration - Generate and Apply Discount Code
-app.post('/api/generate-discount', async (req, res) => {
+app.post('/test/generate-discount', async (req, res) => {
   try {
     const { shop, customer_id, purchase_order, cart_total, access_token } = req.body;
     
@@ -210,7 +210,7 @@ app.post('/api/generate-discount', async (req, res) => {
 });
 
 // Shopify App Integration - Apply Discount Code to Cart
-app.post('/api/apply-discount-code', async (req, res) => {
+app.post('/test/apply-discount-code', async (req, res) => {
   try {
     const { shop, discount_code, cart_token, access_token } = req.body;
     
