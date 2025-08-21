@@ -1,0 +1,540 @@
+{% comment %}
+  Cart Credit Check Snippet - Integrated with Current App
+  This snippet works with your existing server to apply real discounts
+{% endcomment %}
+
+{% if customer %}
+  <div class="credit-check-container" style="margin-top: 20px; padding: 20px; border: 1px solid #ddd; border-radius: 8px; background: #f9f9f9;">
+    
+    <!-- Credit Check Toggle -->
+    <div class="credit-check-toggle">
+      <label style="display: flex; align-items: center; cursor: pointer; font-weight: 600; color: #333;">
+        <input type="checkbox" id="creditCheckToggle" style="margin-right: 10px; transform: scale(1.2);">
+        <span>Use Credit Check for This Order</span>
+      </label>
+    </div>
+
+    <!-- Credit Check Form (Hidden by default) -->
+    <div id="creditCheckForm" style="display: none; margin-top: 20px;">
+      
+      <!-- Form Fields -->
+      <div class="form-group" style="margin-bottom: 15px;">
+        <label for="customerId" style="display: block; margin-bottom: 5px; font-weight: 500; color: #555;">
+          Customer ID:
+        </label>
+        <input 
+          type="text" 
+          id="customerId" 
+          placeholder="Enter your customer ID (e.g., 0698ab21-5fa1-11f0-f6d9-7927451b268f)" 
+          style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px;"
+        >
+        <small style="color: #888; font-size: 12px;">Enter your unique customer identifier</small>
+      </div>
+
+      <div class="form-group" style="margin-bottom: 20px;">
+        <label for="purchaseOrder" style="display: block; margin-bottom: 5px; font-weight: 500; color: #555;">
+          Purchase Order Number:
+        </label>
+        <input 
+          type="text" 
+          id="purchaseOrder" 
+          placeholder="Enter PO number (e.g., PO123456789)" 
+          style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px;"
+        >
+      </div>
+
+      <!-- Submit Button -->
+      <button 
+        id="checkCreditBtn" 
+        style="background: #007cba; color: white; border: none; padding: 12px 24px; border-radius: 4px; cursor: pointer; font-weight: 500; width: 100%;"
+        onclick="checkCredit()"
+      >
+        Check Credit Availability
+      </button>
+
+      <!-- Loading State -->
+      <div id="loadingState" style="display: none; text-align: center; margin-top: 15px;">
+        <div style="color: #007cba; font-weight: 500;">Checking credit...</div>
+      </div>
+
+      <!-- Results Display -->
+      <div id="creditResults" style="display: none; margin-top: 20px; padding: 15px; border-radius: 6px;">
+        <!-- Results will be populated here -->
+      </div>
+
+      <!-- Error Display -->
+      <div id="creditError" style="display: none; margin-top: 15px; padding: 10px; background: #fee; border: 1px solid #fcc; border-radius: 4px; color: #c33;">
+        <!-- Errors will be populated here -->
+      </div>
+    </div>
+
+    <!-- Credit Status Summary -->
+    <div id="creditStatus" style="display: none; margin-top: 15px; padding: 15px; border-radius: 6px; font-weight: 500;">
+      <!-- Credit status will be shown here -->
+    </div>
+  </div>
+
+  <style>
+    .credit-check-container {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    }
+    
+    .credit-check-toggle input[type="checkbox"]:checked + span {
+      color: #007cba;
+    }
+    
+    .form-group input:focus {
+      outline: none;
+      border-color: #007cba;
+      box-shadow: 0 0 0 2px rgba(0, 124, 186, 0.2);
+    }
+    
+    #checkCreditBtn:hover {
+      background: #005a87;
+    }
+    
+    #checkCreditBtn:disabled {
+      background: #ccc;
+      cursor: not-allowed;
+    }
+    
+    .credit-approved {
+      background: #d4edda !important;
+      border-color: #c3e6cb !important;
+      color: #155724 !important;
+    }
+    
+    .credit-insufficient {
+      background: #f8d7da !important;
+      border-color: #f5c6cb !important;
+      color: #721c24 !important;
+    }
+    
+    .discount-applied {
+      background: #d1ecf1 !important;
+      border-color: #bee5eb !important;
+      color: #0c5460 !important;
+    }
+  </style>
+
+  <script>
+    // Global variables
+    let currentCredit = 0;
+    let orderTotal = 0;
+    let discountApplied = false;
+    
+    // Your app URL - update this to match your server
+    let appUrl = '{{ app_url }}' || 'https://your-ngrok-url.ngrok-free.app';
+
+    // Initialize when DOM is ready
+    document.addEventListener('DOMContentLoaded', function() {
+      initializeCreditCheck();
+    });
+
+    function initializeCreditCheck() {
+      // Get order total from cart
+      updateOrderTotal();
+      
+      // Set up toggle functionality
+      const toggle = document.getElementById('creditCheckToggle');
+      const form = document.getElementById('creditCheckForm');
+      
+      toggle.addEventListener('change', function() {
+        if (this.checked) {
+          form.style.display = 'block';
+          // Focus on customer ID field when form opens
+          document.getElementById('customerId').focus();
+        } else {
+          form.style.display = 'none';
+          resetCreditCheck();
+        }
+      });
+    }
+
+    function updateOrderTotal() {
+      // Try to get order total from your specific cart structure
+      const cartTotalElement = document.querySelector('.t4s-cart__totalPrice') || 
+                              document.querySelector('[data-cart-tt-price]') ||
+                              document.querySelector('.cart__total') ||
+                              document.querySelector('[data-cart-total]');
+      
+      if (cartTotalElement) {
+        const totalText = cartTotalElement.textContent || cartTotalElement.innerText;
+        // Remove currency symbols and convert to number
+        orderTotal = parseFloat(totalText.replace(/[^0-9.,]/g, '').replace(',', '.')) || 0;
+        console.log('Cart total detected from element:', orderTotal);
+      }
+      
+      // Fallback: try to get from cart object
+      if (typeof Shopify !== 'undefined' && Shopify.cart) {
+        orderTotal = Shopify.cart.total_price / 100; // Convert from cents
+        console.log('Cart total from Shopify object:', orderTotal);
+      }
+      
+      console.log('Final order total:', orderTotal);
+    }
+
+    async function checkCredit() {
+      const customerId = document.getElementById('customerId').value.trim();
+      const purchaseOrder = document.getElementById('purchaseOrder').value.trim();
+      
+      // Validation
+      if (!customerId || !purchaseOrder) {
+        showError('Please fill in all required fields.');
+        return;
+      }
+
+      // Show loading state
+      showLoading(true);
+      hideError();
+      hideResults();
+
+      try {
+        // Update order total before making request
+        updateOrderTotal();
+        
+        console.log('Sending credit check request:', {
+          shop: '{{ shop.permanent_domain }}',
+          customer_id: customerId,
+          purchase_order: purchaseOrder,
+          cart_total: orderTotal
+        });
+        
+        // Call your integrated app API
+        const response = await fetch(`${appUrl}/api/credit-check`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            shop: '{{ shop.permanent_domain }}',
+            customer_id: customerId,
+            purchase_order: purchaseOrder,
+            cart_total: orderTotal
+          })
+        });
+
+        console.log('Response status:', response.status);
+
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const data = await response.json();
+        console.log('API Response data:', data);
+        
+        handleCreditResponse(data);
+
+      } catch (error) {
+        console.error('Credit check error:', error);
+        showError('Failed to check credit. Please try again or contact support.');
+      } finally {
+        showLoading(false);
+      }
+    }
+
+    function handleCreditResponse(data) {
+      if (data.success && data.credit_approved) {
+        currentCredit = parseFloat(data.available_credit) || 0;
+        showCreditResults(data);
+        processCreditApplication();
+      } else {
+        // Show error or insufficient credit message
+        const errorMessage = data.message || 'Credit check failed. Please verify your information.';
+        showError(errorMessage);
+      }
+    }
+
+    function showCreditResults(data) {
+      const resultsDiv = document.getElementById('creditResults');
+      const statusDiv = document.getElementById('creditStatus');
+      
+      resultsDiv.innerHTML = `
+        <div style="margin-bottom: 10px;">
+          <strong>Credit Check Results:</strong>
+        </div>
+        <div style="margin-bottom: 5px;">Customer ID: ${data.customer_id || 'N/A'}</div>
+        <div style="margin-bottom: 5px;">Purchase Order: ${data.purchase_order || 'N/A'}</div>
+        <div style="margin-bottom: 5px;">Available Credit: $${data.available_credit.toFixed(2)}</div>
+        <div style="margin-bottom: 5px;">Order Total: $${data.cart_total.toFixed(2)}</div>
+        <div style="margin-bottom: 5px;">Credit Status: Approved</div>
+      `;
+      
+      resultsDiv.style.display = 'block';
+      
+      // Show credit approval status
+      statusDiv.innerHTML = `
+        <div class="discount-applied">
+          🎉 Credit Approved! Your credit covers the full order amount.
+          <br><strong>Your cart total is now $0.00!</strong>
+          <br><small>Proceed to checkout to complete your order.</small>
+        </div>
+      `;
+      
+      statusDiv.style.display = 'block';
+      
+      // Apply visual cart modification
+      applyVisualCartModification();
+    }
+
+    function processCreditApplication() {
+      if (currentCredit >= orderTotal && orderTotal > 0) {
+        applyDiscount();
+      } else {
+        removeDiscount();
+      }
+    }
+
+    function applyDiscount() {
+      if (!discountApplied) {
+        discountApplied = true;
+        console.log('Credit discount applied - cart total should be $0.00');
+        
+        // Enable checkout button
+        enableCheckout();
+        
+        // Store discount info
+        localStorage.setItem('creditDiscount', JSON.stringify({
+          applied: true,
+          amount: orderTotal,
+          customerId: document.getElementById('customerId').value,
+          purchaseOrder: document.getElementById('purchaseOrder').value
+        }));
+      }
+    }
+
+    function removeDiscount() {
+      if (discountApplied) {
+        discountApplied = false;
+        console.log('Removing credit discount');
+        
+        // Disable checkout button if needed
+        disableCheckout();
+        
+        // Remove discount info from storage
+        localStorage.removeItem('creditDiscount');
+        
+        // Restore original cart display
+        restoreOriginalCartDisplay();
+      }
+    }
+
+    function enableCheckout() {
+      // Enable checkout button
+      const checkoutBtn = document.querySelector('[name="checkout"]') || 
+                         document.querySelector('.cart__checkout') ||
+                         document.querySelector('.cart-checkout');
+      
+      if (checkoutBtn) {
+        checkoutBtn.disabled = false;
+        checkoutBtn.style.opacity = '1';
+        checkoutBtn.style.cursor = 'pointer';
+      }
+    }
+
+    function disableCheckout() {
+      // Disable checkout button
+      const checkoutBtn = document.querySelector('[name="checkout"]') || 
+                         document.querySelector('.cart__checkout') ||
+                         document.querySelector('.cart-checkout');
+      
+      if (checkoutBtn) {
+        checkoutBtn.disabled = true;
+        checkoutBtn.style.opacity = '0.5';
+        checkoutBtn.style.cursor = 'not-allowed';
+      }
+    }
+
+    function resetCreditCheck() {
+      currentCredit = 0;
+      discountApplied = false;
+      hideResults();
+      hideError();
+      hideStatus();
+      removeDiscount();
+      
+      // Also restore cart display when resetting
+      restoreOriginalCartDisplay();
+    }
+
+    function showLoading(show) {
+      const loadingDiv = document.getElementById('loadingState');
+      loadingDiv.style.display = show ? 'block' : 'none';
+      
+      const submitBtn = document.getElementById('checkCreditBtn');
+      submitBtn.disabled = show;
+      submitBtn.textContent = show ? 'Checking...' : 'Check Credit Availability';
+    }
+
+    function showError(message) {
+      const errorDiv = document.getElementById('creditError');
+      errorDiv.textContent = message;
+      errorDiv.style.display = 'block';
+    }
+
+    function hideError() {
+      document.getElementById('creditError').style.display = 'none';
+    }
+
+    function hideResults() {
+      document.getElementById('creditResults').style.display = 'none';
+    }
+
+    function hideStatus() {
+      document.getElementById('creditStatus').style.display = 'none';
+    }
+
+    // Listen for cart updates
+    if (typeof Shopify !== 'undefined') {
+      Shopify.onCartUpdate = function() {
+        updateOrderTotal();
+        if (discountApplied) {
+          processCreditApplication();
+        }
+      };
+    }
+    
+    // Apply visual cart modification (shows $0.00 on cart page)
+    function applyVisualCartModification() {
+      try {
+        console.log('Applying visual cart modification');
+        
+        // Update cart total display to show $0.00
+        const cartTotalElements = document.querySelectorAll('.t4s-cart__totalPrice, [data-cart-tt-price], .cart__total');
+        cartTotalElements.forEach(element => {
+          const originalText = element.textContent;
+          element.setAttribute('data-original-total', originalText);
+          element.innerHTML = '<span style="color: #28a745; text-decoration: line-through;">' + originalText + '</span> <span style="color: #28a745; font-weight: bold;">$0.00</span>';
+        });
+        
+        // Add visual discount line item
+        const cartTotalContainer = document.querySelector('.t4s-cart-total');
+        if (cartTotalContainer) {
+          const discountLine = document.createElement('div');
+          discountLine.className = 't4s-cart-discount-line';
+          discountLine.style.cssText = 'margin-top: 10px; padding: 8px 0; border-top: 1px solid #eee;';
+          discountLine.innerHTML = `
+            <div class="t4s-row t4s-gx-30 t4s-gy-0 t4s-d-inline-flex t4s-align-items-center t4s-justify-content-between">
+              <div class="t4s-col-auto t4s-col-item"><strong style="color: #28a745;">Credit Discount Applied</strong></div>
+              <div class="t4s-col-auto t4s-col-item t4s-text-right" style="color: #28a745; font-weight: bold;">
+                -$${orderTotal.toFixed(2)}
+              </div>
+            </div>
+          `;
+          cartTotalContainer.appendChild(discountLine);
+        }
+        
+        console.log('Visual cart modification applied');
+        
+      } catch (error) {
+        console.error('Failed to apply visual cart modification:', error);
+      }
+    }
+    
+    // Restore original cart display
+    function restoreOriginalCartDisplay() {
+      try {
+        console.log('Restoring original cart display');
+        
+        // Restore cart total display
+        const cartTotalElements = document.querySelectorAll('.t4s-cart__totalPrice, [data-cart-tt-price], .cart__total');
+        cartTotalElements.forEach(element => {
+          const originalTotal = element.getAttribute('data-original-total');
+          if (originalTotal) {
+            element.innerHTML = originalTotal;
+            element.removeAttribute('data-original-total');
+          }
+        });
+        
+        // Remove visual discount line item
+        const discountLine = document.querySelector('.t4s-cart-discount-line');
+        if (discountLine) {
+          discountLine.remove();
+        }
+        
+        console.log('Original cart display restored');
+        
+      } catch (error) {
+        console.error('Failed to restore original cart display:', error);
+      }
+    }
+    
+    // Listen for checkout button clicks to apply real discount
+    document.addEventListener('click', function(e) {
+      if (e.target.name === 'checkout' || e.target.classList.contains('t4s-btn__checkout')) {
+        if (discountApplied) {
+          e.preventDefault(); // Prevent immediate checkout
+          applyRealDiscountBeforeCheckout();
+        }
+      }
+    });
+    
+    // Apply real discount before checkout
+    async function applyRealDiscountBeforeCheckout() {
+      try {
+        console.log('Applying real discount before checkout');
+        
+        const discountInfo = localStorage.getItem('creditDiscount');
+        if (!discountInfo) {
+          console.error('No discount info found');
+          return;
+        }
+        
+        const discount = JSON.parse(discountInfo);
+        
+        // Generate discount code
+        const generateResponse = await fetch(`${appUrl}/api/generate-discount`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            shop: '{{ shop.permanent_domain }}',
+            customer_id: discount.customerId,
+            purchase_order: discount.purchaseOrder,
+            cart_total: discount.amount,
+            access_token: '{{ shop.access_token }}' // This will need to be set properly
+          })
+        });
+        
+        if (!generateResponse.ok) {
+          throw new Error('Failed to generate discount code');
+        }
+        
+        const generateResult = await generateResponse.json();
+        console.log('Discount code generated:', generateResult);
+        
+        // Apply discount code to cart
+        const applyResponse = await fetch(`${appUrl}/api/apply-discount-code`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            shop: '{{ shop.permanent_domain }}',
+            discount_code: generateResult.discount_code,
+            cart_token: '{{ cart.token }}', // This will need to be set properly
+            access_token: '{{ shop.access_token }}' // This will need to be set properly
+          })
+        });
+        
+        if (!applyResponse.ok) {
+          throw new Error('Failed to apply discount code');
+        }
+        
+        const applyResult = await applyResponse.json();
+        console.log('Discount code applied:', applyResult);
+        
+        // Now proceed to checkout
+        console.log('Real discount applied, proceeding to checkout');
+        
+        // Redirect to checkout
+        window.location.href = '/checkout';
+        
+      } catch (error) {
+        console.error('Failed to apply real discount:', error);
+        alert('Failed to apply discount. Please try again or contact support.');
+      }
+    }
+  </script>
+{% endif %}
