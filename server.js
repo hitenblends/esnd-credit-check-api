@@ -400,51 +400,67 @@ app.all('/proxy/*', async (req, res) => {
 });
 
 const port = process.env.PORT || 3000;
-const httpsPort = process.env.HTTPS_PORT || 3443;
 
-// Start HTTP server (for ngrok to connect to)
-app.listen(port, () => console.log(`HTTP server listening on http://localhost:${port} (for ngrok)`));
+// Check if we're in production (Render) or development (local)
+const isProduction = process.env.NODE_ENV === 'production' || process.env.RENDER;
 
-// Start HTTPS server with self-signed certificate (for local HTTPS access)
-try {
-  // Check if certificates exist, if not create them
-  const certPath = path.join(__dirname, 'certs');
-  const keyPath = path.join(certPath, 'key.pem');
-  const certPathFile = path.join(certPath, 'cert.pem');
+if (isProduction) {
+  // Production mode (Render) - simple HTTP server
+  app.listen(port, () => {
+    console.log(`🚀 Production server running on port ${port}`);
+    console.log('✅ Credit check API endpoints available:');
+    console.log('   - POST /api/credit-check');
+    console.log('   - POST /api/generate-discount');
+    console.log('   - POST /api/apply-discount-code');
+  });
+} else {
+  // Development mode (local) - HTTP + HTTPS servers
+  const httpsPort = process.env.HTTPS_PORT || 3443;
   
-  if (!fs.existsSync(certPath)) {
-    fs.mkdirSync(certPath, { recursive: true });
-  }
-  
-  if (!fs.existsSync(keyPath) || !fs.existsSync(certPathFile)) {
-    console.log('Generating self-signed certificates...');
-    const { execSync } = await import('child_process');
+  // Start HTTP server (for ngrok to connect to)
+  app.listen(port, () => console.log(`HTTP server listening on http://localhost:${port} (for ngrok)`));
+
+  // Start HTTPS server with self-signed certificate (for local HTTPS access)
+  try {
+    // Check if certificates exist, if not create them
+    const certPath = path.join(__dirname, 'certs');
+    const keyPath = path.join(certPath, 'key.pem');
+    const certPathFile = path.join(certPath, 'cert.pem');
     
-    try {
-      // Use proper quoting for paths with spaces
-      const opensslCmd = `openssl req -x509 -newkey rsa:4096 -keyout "${keyPath}" -out "${certPathFile}" -days 365 -nodes -subj "/C=US/ST=State/L=City/O=Organization/CN=localhost"`;
-      execSync(opensslCmd, { stdio: 'inherit' });
-      console.log('Self-signed certificates generated successfully!');
-    } catch (error) {
-      console.log('Could not generate certificates with openssl. HTTPS server will not start.');
-      console.log('You can manually generate certificates or use ngrok for HTTPS access.');
-      console.log('Error details:', error.message);
+    if (!fs.existsSync(certPath)) {
+      fs.mkdirSync(certPath, { recursive: true });
     }
-  }
-  
-  if (fs.existsSync(keyPath) && fs.existsSync(certPathFile)) {
-    const options = {
-      key: fs.readFileSync(keyPath),
-      cert: fs.readFileSync(certPathFile)
-    };
     
-    https.createServer(options, app).listen(httpsPort, () => {
-      console.log(`HTTPS server listening on https://localhost:${httpsPort}`);
-      console.log('⚠️  Note: This uses a self-signed certificate. Your browser will show a security warning.');
-      console.log('   For production, use proper SSL certificates.');
-    });
+    if (!fs.existsSync(keyPath) || !fs.existsSync(certPathFile)) {
+      console.log('Generating self-signed certificates...');
+      const { execSync } = await import('child_process');
+      
+      try {
+        // Use proper quoting for paths with spaces
+        const opensslCmd = `openssl req -x509 -newkey rsa:4096 -keyout "${keyPath}" -out "${certPathFile}" -days 365 -nodes -subj "/C=US/ST=State/L=City/O=Organization/CN=localhost"`;
+        execSync(opensslCmd, { stdio: 'inherit' });
+        console.log('Self-signed certificates generated successfully!');
+      } catch (error) {
+        console.log('Could not generate certificates with openssl. HTTPS server will not start.');
+        console.log('You can manually generate certificates or use ngrok for HTTPS access.');
+        console.log('Error details:', error.message);
+      }
+    }
+    
+    if (fs.existsSync(keyPath) && fs.existsSync(certPathFile)) {
+      const options = {
+        key: fs.readFileSync(keyPath),
+        cert: fs.readFileSync(certPathFile)
+      };
+      
+      https.createServer(options, app).listen(httpsPort, () => {
+        console.log(`HTTPS server listening on https://localhost:${httpsPort}`);
+        console.log('⚠️  Note: This uses a self-signed certificate. Your browser will show a security warning.');
+        console.log('   For production, use proper SSL certificates.');
+      });
+    }
+  } catch (error) {
+    console.log('HTTPS server could not be started:', error.message);
+    console.log('Your server is still accessible via HTTP on port', port);
   }
-} catch (error) {
-  console.log('HTTPS server could not be started:', error.message);
-  console.log('Your server is still accessible via HTTP on port', port);
 }
