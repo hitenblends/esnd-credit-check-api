@@ -1,0 +1,76 @@
+
+
+<div class="icon-links {{ section.settings.alignment }}">
+  <div class="icon-links-wrapper">
+    {% for block in section.blocks %}
+      <a class="icon-link" href="{{ block.settings.link }}" {{ block.shopify_attributes }}>
+        <div class="icon">{% if block.settings.svg_icon != blank %}{{ block.settings.svg_icon }}{% endif %}</div>
+        <div class="title">{{ block.settings.title }}</div>
+      </a>
+    {% endfor %}
+  </div>
+</div>
+{% schema %}
+{
+  "name": "Icon Links",
+  "tag": "section",
+  "class": "icon-links-section",
+  "blocks": [
+    {
+      "type": "link",
+      "name": "Icon Link",
+      "settings": [
+        {
+          "type": "textarea",
+          "id": "svg_icon",
+          "label": "SVG Icon",
+          "info": "Paste raw inline SVG code here (e.g., <svg>...</svg>)"
+        },
+        {
+          "type": "text",
+          "id": "title",
+          "label": "Title"
+        },
+        {
+          "type": "url",
+          "id": "link",
+          "label": "Link"
+        }
+      ]
+    }
+  ],
+  "max_blocks": 6,
+  "presets": [
+    {
+      "name": "Icon Links Row",
+      "category": "Custom"
+    }
+  ]
+}
+{% endschema %}
+
+<style>
+.icon-links {
+  padding: 2rem 1rem;
+}
+.icon-links-wrapper {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 40px;
+}
+.icon-link {
+  text-align: center;
+  color: #444;
+  text-decoration: none;
+}
+.icon-link .icon svg {
+  width: 24px;
+  height: 24px;
+  fill: none;
+  margin-bottom: 0.5rem;
+}
+.icon-link .title {
+  font-size: 14px;
+}
+</style>

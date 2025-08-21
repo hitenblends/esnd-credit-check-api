@@ -1,0 +1,575 @@
+{{ 't4s-section.css' | asset_url | stylesheet_tag }}
+{{ 't4s-accordion.css' | asset_url | stylesheet_tag }}
+{%- liquid
+    assign sid = section.id
+    assign se_stts = section.settings
+    assign se_blocks = section.blocks
+    assign stt_layout = se_stts.layout
+    assign stt_image_bg = se_stts.image_bg
+    if se_stts.layout == 't4s-cus-width'
+        assign html_layout = '<div class="t4s-container" style="--width:010693px">__</div>' | split: '__'
+    elsif stt_layout == 't4s-se-container' 
+        assign html_layout = '<div class="t4s-container">__</div></div>' | split: '__'
+    elsif stt_layout == 't4s-container-wrap'
+        assign html_layout = '<div class="t4s-container">__</div>' | split: '__'
+    else
+        assign html_layout = '__' | split: '__'
+    endif
+    assign forloop_first = true
+ -%}
+<div class="t4s-section-inner t4s_nt_se_{{ sid }} {{ stt_layout }} {% if stt_image_bg != blank and stt_layout != 't4s-se-container' %} t4s-has-imgbg lazyloadt4s {% endif %}" {% if stt_image_bg != blank and stt_layout != 't4s-se-container' %} data-bgset="{{ stt_image_bg | image_url: width: 1 }}" data-sizes="auto" data-optimumx="2" {% endif %} {% render 'section_style', se_stts: se_stts %}>
+    {{- html_layout[0] | replace: '010693', se_stts.custom_width -}}
+    {%- if stt_layout == 't4s-se-container' -%}<div class="t4s-container-inner {% if stt_image_bg != blank %} t4s-has-imgbg lazyloadt4s {% endif %}" {%- if stt_image_bg != blank -%} data-bgset="{{ stt_image_bg | image_url: width: 1 }}" data-sizes="auto" data-optimumx="2" {%- endif -%} > {%- endif -%}
+    <div class="t4s-accordion-style-{{ se_stts.accor_des }}">
+        {%- render 'section_tophead', se_stts: se_stts -%}
+        <div class="t4s-heading-buttons" style="--button-bg: {{ se_stts.button_bg }}; --button-text-cl: {{ se_stts.button_text_cl }}; --button-active-bg: {{ se_stts.button_active_bg }}; --button-active-text-cl: {{ se_stts.button_active_text_cl }};">
+            {%- for block in se_blocks -%}
+                {%- if block.type != 'button_group' -%}{% continue %}{%- endif -%}
+                {%- assign bk_stts = block.settings -%}
+                {%- assign blockid = block.id -%}
+                {%- if bk_stts.title == blank -%}{% continue %}{%- endif -%}
+                <div class="t4s-button-group-wrapper">
+                    <button class="t4s-accor-button {% if forloop_first and se_stts.auto_active %} t4s-active {% endif %}" data-t4s-tab-button data-target="t4s-group-{{ blockid }}" {{ block.shopify_attributes }}>
+                        {{ bk_stts.title }} (ID: {{ blockid }})
+                    </button>
+                    <div class="t4s-tab-content-group {% if forloop_first and se_stts.auto_active %} t4s-active {% else %} t4s-hidden {% endif %}" id="t4s-group-{{ blockid }}" data-t4s-tab-content style="--title-cl: {{ se_stts.title_cl }};--bg-title-cl: {{ se_stts.bg_title_cl }};--title-active-cl: {{ se_stts.title_active_cl }};--bg-title-active-cl: {{ se_stts.bg_title_active_cl }};--content-cl: {{ se_stts.content_cl }};--bg-content-cl: {{ se_stts.bg_content_cl }};">
+                        {%- for accordion_block in se_blocks -%}
+                            {%- if accordion_block.type != 'accordion_item' or accordion_block.settings.button_id != blockid -%}{% continue %}{%- endif -%}
+                            <!-- Debug: Accordion for button_id={{ accordion_block.settings.button_id }}, blockid={{ blockid }} -->
+                            {%- assign acc_stts = accordion_block.settings -%}
+                            {%- if acc_stts.title == blank or acc_stts.content == blank -%}{%- continue %}{%- endif -%}
+                           <div class="t4s-tab-wrapper" data-t4s-tab-wrapper {{ accordion_block.shopify_attributes }} timeline hdt-reveal="slide-in">
+    <a id="b_{{ blockid }}_{{ accordion_block.id }}" class="t4s-accor-title" href="#t4s-{{ blockid }}_{{ accordion_block.id }}" rel="nofollow" data-t4s-tab-item data-no-instant>
+        <span class="t4s-accor-text">
+            <span class="t4s-accor-icon">{%- render 'icon_accordion', icon: acc_stts.icon -%} </span>
+            {{ acc_stts.title }}
+        </span>
+        <span class="t4s-accor-item-nav">+</span> <!-- Default to '+' -->
+    </a>
+    <div id="t4s-{{ blockid }}_{{ accordion_block.id }}" class="t4s-tab-content t4s-rte" data-t4s-tab-content {% if se_stts.auto_active == false %} style="display: none;"{%- endif -%}>{{ acc_stts.content }}</div>
+</div>
+                        {%- endfor -%}
+                    </div>
+                </div>
+                {%- assign forloop_first = false -%}
+            {%- endfor -%}
+        </div>
+    </div>
+    {{- html_layout[1] -}}
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const buttons = document.querySelectorAll('.t4s-accor-button');
+    const contentGroups = document.querySelectorAll('.t4s-tab-content-group');
+    const accordionTitles = document.querySelectorAll('.t4s-accor-title');
+
+    buttons.forEach(button => {
+        button.addEventListener('click', function() {
+            const targetId = this.getAttribute('data-target');
+            const targetGroup = document.getElementById(targetId);
+
+            // Toggle active state for buttons
+            buttons.forEach(btn => btn.classList.remove('t4s-active'));
+            this.classList.add('t4s-active');
+
+            // Show only the clicked button's content group
+            contentGroups.forEach(group => {
+                if (group === targetGroup) {
+                    group.classList.add('t4s-active');
+                    group.classList.remove('t4s-hidden');
+                } else {
+                    group.classList.remove('t4s-active');
+                    group.classList.add('t4s-hidden');
+                }
+            });
+        });
+    });
+
+    accordionTitles.forEach(title => {
+        title.addEventListener('click', function(e) {
+            e.preventDefault();
+            const targetId = this.getAttribute('href').substring(1);
+            const targetContent = document.getElementById(targetId);
+            const wrapper = this.parentElement;
+            const navIcon = this.querySelector('.t4s-accor-item-nav');
+
+            // Toggle active class and content display
+            const isActive = wrapper.classList.contains('t4s-active');
+            wrapper.classList.toggle('t4s-active');
+
+            // Toggle content visibility
+            targetContent.style.display = isActive ? 'none' : 'block';
+
+            // Toggle icon between '+' and '−'
+            navIcon.textContent = isActive ? '+' : '−';
+        });
+    });
+});
+</script>
+
+{% schema %}
+{
+    "name": "Accordion with Buttons",
+    "tag": "section",
+    "class": "t4s-section t4s-section-all t4s_tp_cdt t4s-accordion t4s_tp_tab",
+    "settings": [
+        {
+            "type": "header",
+            "content": "1. Heading options"
+        },
+        {
+            "type": "select",
+            "id": "design_heading",
+            "label": "Heading design",
+            "default": "1",
+            "options": [
+                {"value": "1", "label": "Design 01"},
+                {"value": "2", "label": "Design 02"},
+                {"value": "3", "label": "Design 03"},
+                {"value": "4", "label": "Design 04"},
+                {"value": "5", "label": "Design 05"},
+                {"value": "6", "label": "Design 06 (width line-awesome)"},
+                {"value": "7", "label": "Design 07"},
+                {"value": "8", "label": "Design 08"},
+                {"value": "9", "label": "Design 09"},
+                {"value": "10", "label": "Design 10"},
+                {"value": "11", "label": "Design 11"},
+                {"value": "12", "label": "Design 12"},
+                {"value": "13", "label": "Design 13"},
+                {"value": "14", "label": "Design 14"},
+                {"value": "15", "label": "Design 15"}
+            ]
+        },
+        {
+            "type": "checkbox",
+            "id": "heading_center",
+            "label": "Center heading align",
+            "default": true
+        },
+        {
+            "type": "text",
+            "id": "top_heading",
+            "label": "Heading",
+            "default": "Accordion with Buttons"
+        },
+        {
+            "type": "text",
+            "id": "icon_heading",
+            "label": "Enter a name icon",
+            "info": "Only used for design 6 [LineAwesome](https://kalles.the4.co/font-lineawesome/)",
+            "default": "las la-gem"
+        },
+        {
+            "type": "richtext",
+            "id": "top_subheading",
+            "label": "Subheading"
+        },
+        {
+            "type": "number",
+            "id": "tophead_mb",
+            "label": "Bottom space (Desktop)(px)",
+            "info": "The vertical spacing between heading and content.",
+            "default": 30
+        },
+        {
+            "type": "number",
+            "id": "tophead_mb_tb",
+            "label": "Bottom space (Tablet)(px)",
+            "info": "The spacing is between the heading and the content",
+            "default": 30
+        },
+        {
+            "type": "number",
+            "id": "tophead_mb_mb",
+            "label": "Bottom space (Mobile)(px)",
+            "info": "The spacing is between the heading and the content",
+            "default": 25
+        },
+        {
+            "type": "header",
+            "content": "2. General options"
+        },
+        {
+            "type": "select",
+            "id": "accor_des",
+            "options": [
+                {"value": "1", "label": "Design 1"},
+                {"value": "2", "label": "Design 2"}
+            ],
+            "label": "Accordion design",
+            "default": "1"
+        },
+        {
+            "type": "color",
+            "id": "button_bg",
+            "label": "Button background color",
+            "default": "#f6f6f8"
+        },
+        {
+            "type": "color",
+            "id": "button_text_cl",
+            "label": "Button text color",
+            "default": "#b59677"
+        },
+        {
+            "type": "color",
+            "id": "button_active_bg",
+            "label": "Button active background color",
+            "default": "#b59677"
+        },
+        {
+            "type": "color",
+            "id": "button_active_text_cl",
+            "label": "Button active text color",
+            "default": "#ffffff"
+        },
+        {
+            "type": "color",
+            "id": "title_cl",
+            "label": "Accordion label color",
+            "default": "#b59677"
+        },
+        {
+            "type": "color",
+            "id": "bg_title_cl",
+            "label": "Accordion label background color",
+            "default": "#f6f6f8"
+        },
+        {
+            "type": "color",
+            "id": "title_active_cl",
+            "label": "Accordion label active color",
+            "default": "#b59677"
+        },
+        {
+            "type": "color",
+            "id": "bg_title_active_cl",
+            "label": "Accordion label active background color",
+            "default": "#f6f6f8"
+        },
+        {
+            "type": "color",
+            "id": "content_cl",
+            "label": "Content color",
+            "default": "#878787"
+        },
+        {
+            "type": "color",
+            "id": "bg_content_cl",
+            "label": "Content background color",
+            "default": "#fff"
+        },
+        {
+            "type": "select",
+            "id": "content_align",
+            "label": "Content align",
+            "default": "t4s-text-start",
+            "options": [
+                {"value": "t4s-text-start", "label": "Left"},
+                {"value": "t4s-text-center", "label": "Center"},
+                {"value": "t4s-text-end", "label": "Right"}
+            ]
+        },
+        {
+            "type": "checkbox",
+            "id": "auto_active",
+            "label": "Auto active first button",
+            "default": true
+        },
+        {
+            "type": "header",
+            "content": "3. Design options"
+        },
+        {
+            "type": "select",
+            "id": "layout",
+            "default": "t4s-container-wrap",
+            "label": "Layout",
+            "options": [
+                {"value": "t4s-cus-width", "label": "Custom width"},
+                {"value": "t4s-se-container", "label": "Container"},
+                {"value": "t4s-container-wrap", "label": "Wrapped container"},
+                {"value": "t4s-container-fluid", "label": "Full width"}
+            ]
+        },
+        {
+            "type": "range",
+            "id": "custom_width",
+            "label": "Custom width for content",
+            "info": "Only working when use layout custom width",
+            "default": 1000,
+            "min": 500,
+            "max": 1000,
+            "step": 10,
+            "unit": "px"
+        },
+        {
+            "type": "color",
+            "id": "cl_bg",
+            "label": "Background"
+        },
+        {
+            "type": "color_background",
+            "id": "cl_bg_gradient",
+            "label": "Background gradient"
+        },
+        {
+            "type": "image_picker",
+            "id": "image_bg",
+            "label": "Background image"
+        },
+        {
+            "type": "text",
+            "id": "mg",
+            "label": "Margin",
+            "info": "Margin top, margin right, margin bottom, margin left. If you do not use it please blank.",
+            "default": ",,50px,",
+            "placeholder": ",,50px,"
+        },
+        {
+            "type": "text",
+            "id": "pd",
+            "label": "Padding",
+            "info": "Padding top, padding right, padding bottom, padding left. If you do not use it please blank.",
+            "placeholder": "50px,,50px,"
+        },
+        {
+            "type": "header",
+            "content": "+ Design tablet options"
+        },
+        {
+            "type": "text",
+            "id": "mg_tb",
+            "label": "Margin",
+            "default": ",,50px,",
+            "placeholder": ",,50px,"
+        },
+        {
+            "type": "text",
+            "id": "pd_tb",
+            "label": "Padding",
+            "placeholder": "50px,,50px,"
+        },
+        {
+            "type": "header",
+            "content": "+ Design mobile options"
+        },
+        {
+            "type": "text",
+            "id": "mg_mb",
+            "label": "Margin",
+            "default": ",,30px,",
+            "placeholder": ",,50px,"
+        },
+        {
+            "type": "text",
+            "id": "pd_mb",
+            "label": "Padding",
+            "placeholder": ",,50px,"
+        }
+    ],
+    "blocks": [
+        {
+            "type": "button_group",
+            "name": "Button",
+            "settings": [
+                {
+                    "type": "text",
+                    "id": "title",
+                    "label": "Button label",
+                    "default": "Button"
+                }
+            ]
+        },
+        {
+            "type": "accordion_item",
+            "name": "Accordion Item",
+            "settings": [
+                {
+                    "type": "text",
+                    "id": "button_id",
+                    "label": "Button ID",
+                    "info": "Enter the ID of the button this accordion belongs to (e.g., block ID of the button)"
+                },
+                {
+                    "type": "select",
+                    "id": "icon",
+                    "label": "Accordion icon",
+                    "default": "none",
+                    "options": [
+                        {"value": "none", "label": "None"},
+                        {"value": "box", "label": "Box"},
+                        {"value": "chat_bubble", "label": "Chat bubble"},
+                        {"value": "check_mark", "label": "Check mark"},
+                        {"value": "dryer", "label": "Dryer"},
+                        {"value": "eye", "label": "Eye"},
+                        {"value": "heart", "label": "Heart"},
+                        {"value": "iron", "label": "Iron"},
+                        {"value": "leaf", "label": "Leaf"},
+                        {"value": "leather", "label": "Leather"},
+                        {"value": "lock", "label": "Lock"},
+                        {"value": "map_pin", "label": "Map pin"},
+                        {"value": "pants", "label": "Pants"},
+                        {"value": "plane", "label": "Plane"},
+                        {"value": "price_tag", "label": "Price tag"},
+                        {"value": "question_mark", "label": "Question mark"},
+                        {"value": "return", "label": "Return"},
+                        {"value": "ruler", "label": "Ruler"},
+                        {"value": "shirt", "label": "Shirt"},
+                        {"value": "shoe", "label": "Shoe"},
+                        {"value": "silhouette", "label": "Silhouette"},
+                        {"value": "star", "label": "Star"},
+                        {"value": "truck", "label": "Truck"},
+                        {"value": "washing", "label": "Washing"}
+                    ]
+                },
+                {
+                    "type": "text",
+                    "id": "title",
+                    "label": "Accordion label",
+                    "default": "Accordion item"
+                },
+                {
+                    "type": "richtext",
+                    "id": "content",
+                    "label": "Accordion content"
+                }
+            ]
+        }
+    ],
+    "presets": [
+        {
+            "name": "Accordion with Buttons",
+            "category": "group8",
+            "blocks": [
+                {
+                    "type": "button_group",
+                    "settings": {
+                        "title": "Button 01"
+                    }
+                },
+                {
+                    "type": "accordion_item",
+                    "settings": {
+                        "button_id": "button_01",
+                        "title": "Accordion 1",
+                        "content": "<p>Content for first accordion under Button 01.</p>",
+                        "icon": "star"
+                    }
+                },
+                {
+                    "type": "accordion_item",
+                    "settings": {
+                        "button_id": "button_01",
+                        "title": "Accordion 2",
+                        "content": "<p>Content for second accordion under Button 01.</p>",
+                        "icon": "heart"
+                    }
+                },
+                {
+                    "type": "accordion_item",
+                    "settings": {
+                        "button_id": "button_01",
+                        "title": "Accordion 3",
+                        "content": "<p>Content for third accordion under Button 01.</p>",
+                        "icon": "leaf"
+                    }
+                },
+                {
+                    "type": "button_group",
+                    "settings": {
+                        "title": "Button 02"
+                    }
+                },
+                {
+                    "type": "accordion_item",
+                    "settings": {
+                        "button_id": "button_02",
+                        "title": "Accordion 1",
+                        "content": "<p>Content for first accordion under Button 02.</p>",
+                        "icon": "lock"
+                    }
+                },
+                {
+                    "type": "accordion_item",
+                    "settings": {
+                        "button_id": "button_02",
+                        "title": "Accordion 2",
+                        "content": "<p>Content for second accordion under Button 02.</p>",
+                        "icon": "map_pin"
+                    }
+                }
+            ]
+        }
+    ]
+}
+{% endschema %}
+
+<style>
+.t4s-heading-buttons {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-bottom: 20px;
+}
+.t4s-button-group-wrapper {
+    width: 100%;
+    position: relative;
+    margin-bottom: 10px;
+}
+.t4s-tab-wrapper {
+    position: relative;
+    margin-bottom: 10px;
+}
+.t4s-accor-button {
+    background: var(--button-bg);
+    color: var(--button-text-cl);
+    border: none;
+    padding: 10px 20px;
+    width: 100%;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-align: center;
+}
+.t4s-accor-button.t4s-active {
+    background: var(--button-active-bg);
+    color: var(--button-active-text-cl);
+}
+.t4s-tab-content-group {
+    display: none;
+    margin-top: 10px;
+}
+.t4s-tab-content-group.t4s-active {
+    display: block;
+}
+.t4s-tab-content {
+    display: none;
+}
+.t4s-tab-content.t4s-active {
+    display: block;
+}
+.t4s-hidden {
+    display: none;
+}
+.t4s-accor-title {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    padding: 10px 15px;
+    background: var(--bg-title-cl);
+    color: var(--title-cl);
+    text-decoration: none;
+}
+.t4s-accor-title.t4s-active {
+    background: var(--bg-title-active-cl);
+    color: var(--title-active-cl);
+}
+.t4s-accor-item-nav {
+    font-size: 18px;
+    font-weight: bold;
+    width: 20px;
+    text-align: center;
+}
+</style>

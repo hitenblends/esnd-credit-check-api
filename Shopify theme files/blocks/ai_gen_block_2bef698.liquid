@@ -1,0 +1,772 @@
+{% doc %}
+  @prompt
+    create a sort by section work properly, not wroking when i am click that time not open dropdown
+
+{% enddoc %}
+{% assign ai_gen_id = block.id | replace: '_', '' | downcase %}
+
+{% style %}
+  .ai-sort-by-container-{{ ai_gen_id }} {
+    padding: {{ block.settings.padding_top }}px 0 {{ block.settings.padding_bottom }}px;
+    background-color: {{ block.settings.background_color }};
+  }
+
+  .ai-sort-by-wrapper-{{ ai_gen_id }} {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 20px;
+  }
+
+  .ai-sort-by-content-{{ ai_gen_id }} {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+    flex-wrap: wrap;
+  }
+
+  .ai-sort-by-title-{{ ai_gen_id }} {
+    color: {{ block.settings.text_color }};
+    font-size: {{ block.settings.title_size }}px;
+    font-weight: 600;
+    margin: 0;
+  }
+
+  .ai-sort-by-controls-{{ ai_gen_id }} {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    flex-wrap: wrap;
+  }
+
+  .ai-sort-by-label-{{ ai_gen_id }} {
+    color: {{ block.settings.text_color }};
+    font-size: {{ block.settings.text_size }}px;
+    font-weight: 500;
+    white-space: nowrap;
+  }
+
+  .ai-sort-by-select-wrapper-{{ ai_gen_id }} {
+    position: relative;
+    min-width: 200px;
+  }
+
+  .ai-sort-by-select-{{ ai_gen_id }} {
+    width: 100%;
+    padding: 12px 40px 12px 16px;
+    border: 1px solid {{ block.settings.border_color }};
+    border-radius: {{ block.settings.border_radius }}px;
+    background-color: {{ block.settings.select_background }};
+    color: {{ block.settings.text_color }};
+    font-size: {{ block.settings.text_size }}px;
+    cursor: pointer;
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23333' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6,9 12,15 18,9'%3e%3c/polyline%3e%3c/svg%3e");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    background-size: 16px;}
+
+  .ai-sort-by-select-{{ ai_gen_id }}:focus {
+    outline: 2px solid {{ block.settings.accent_color }};
+    outline-offset: 2px;
+    border-color: {{ block.settings.accent_color }};
+  }
+
+  .ai-sort-by-select-{{ ai_gen_id }}:hover {
+    border-color: {{ block.settings.accent_color }};
+  }
+
+  .ai-sort-by-results-{{ ai_gen_id }} {
+    color: {{ block.settings.text_color }};
+    font-size: {{ block.settings.text_size }}px;
+    white-space: nowrap;
+  }
+
+  .ai-sort-by-custom-dropdown-{{ ai_gen_id }} {
+    position: relative;
+    min-width: 200px;
+  }
+
+  .ai-sort-by-dropdown-button-{{ ai_gen_id }} {
+    width: 100%;
+    padding: 12px 40px 12px 16px;
+    border: 1px solid {{ block.settings.border_color }};
+    border-radius: {{ block.settings.border_radius }}px;
+    background-color: {{ block.settings.select_background }};
+    color: {{ block.settings.text_color }};
+    font-size: {{ block.settings.text_size }}px;
+    cursor: pointer;
+    text-align: left;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    transition: all 0.2s ease;
+  }
+
+  .ai-sort-by-dropdown-button-{{ ai_gen_id }}:hover {
+    border-color: {{ block.settings.accent_color }};
+  }
+
+  .ai-sort-by-dropdown-button-{{ ai_gen_id }}:focus {
+    outline: 2px solid {{ block.settings.accent_color }};
+    outline-offset: 2px;
+    border-color: {{ block.settings.accent_color }};
+  }
+
+  .ai-sort-by-dropdown-arrow-{{ ai_gen_id }} {
+    width: 16px;
+    height: 16px;
+    transition: transform 0.2s ease;
+  }
+
+  .ai-sort-by-dropdown-button-{{ ai_gen_id }}[aria-expanded="true"] .ai-sort-by-dropdown-arrow-{{ ai_gen_id }} {
+    transform: rotate(180deg);
+  }
+
+  .ai-sort-by-dropdown-menu-{{ ai_gen_id }} {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background-color: {{ block.settings.select_background }};
+    border: 1px solid {{ block.settings.border_color }};
+    border-radius: {{ block.settings.border_radius }}px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    z-index: 1000;
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(-10px);
+    transition: all 0.2s ease;
+    max-height: 300px;
+    overflow-y: auto;
+  }
+
+  .ai-sort-by-dropdown-menu-{{ ai_gen_id }}.active {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+  }
+
+  .ai-sort-by-dropdown-option-{{ ai_gen_id }} {
+    padding: 12px 16px;
+    cursor: pointer;
+    color: {{ block.settings.text_color }};
+    font-size: {{ block.settings.text_size }}px;
+    border: none;
+    background: none;
+    width: 100%;
+    text-align: left;
+    transition: background-color 0.2s ease;
+  }
+
+  .ai-sort-by-dropdown-option-{{ ai_gen_id }}:hover {
+    background-color: rgba(0, 0, 0, 0.05);
+  }
+
+  .ai-sort-by-dropdown-option-{{ ai_gen_id }}.selected {
+    background-color: {{ block.settings.accent_color }};
+    color: white;
+  }
+
+  .ai-sort-by-dropdown-option-{{ ai_gen_id }}:focus {
+    outline: 2px solid {{ block.settings.accent_color }};
+    outline-offset: -2px;
+  }
+
+  @media screen and (max-width: 749px) {
+    .ai-sort-by-content-{{ ai_gen_id }} {
+      {% if block.settings.mobile_layout == 'column' %}
+        flex-direction: column;align-items: stretch;
+      {% else %}
+        align-items: center;
+      {% endif %}
+    }
+
+    .ai-sort-by-controls-{{ ai_gen_id }} {
+      {% if block.settings.mobile_layout == 'column' %}
+        justify-content: space-between;
+        width: 100%;
+      {% else %}
+        justify-content: center;
+      {% endif %}
+    }
+
+    .ai-sort-by-select-wrapper-{{ ai_gen_id }},
+    .ai-sort-by-custom-dropdown-{{ ai_gen_id }} {
+      {% if block.settings.mobile_layout == 'column' %}
+        flex: 1;
+        min-width: 0;
+      {% endif %}
+    }
+
+    .ai-sort-by-title-{{ ai_gen_id }} {
+      {% if block.settings.mobile_layout == 'column' %}
+        text-align: center;
+      {% endif %}
+    }
+  }
+{% endstyle %}
+
+<sort-by-section-{{ ai_gen_id }}
+  class="ai-sort-by-container-{{ ai_gen_id }}"
+  {{ block.shopify_attributes }}
+>
+  <div class="ai-sort-by-wrapper-{{ ai_gen_id }}">
+    <div class="ai-sort-by-content-{{ ai_gen_id }}">
+      {% if block.settings.show_title and block.settings.title != blank %}
+        <h2 class="ai-sort-by-title-{{ ai_gen_id }}">{{ block.settings.title }}</h2>
+      {% endif %}<div class="ai-sort-by-controls-{{ ai_gen_id }}">
+        {% if block.settings.show_results_count %}
+          <div class="ai-sort-by-results-{{ ai_gen_id }}">
+            <span id="ai-sort-results-count-{{ ai_gen_id }}">
+              {% if collection %}
+                {{ collection.products_count }}{% if collection.products_count == 1 %}
+                  {{ block.settings.result_text_singular }}
+                {% else %}
+                  {{ block.settings.result_text_plural }}
+                {% endif %}
+              {% else %}
+                0{{ block.settings.result_text_plural }}
+              {% endif %}
+            </span>
+          </div>
+        {% endif %}
+
+        <label class="ai-sort-by-label-{{ ai_gen_id }}" for="ai-sort-dropdown-{{ ai_gen_id }}">
+          {{ block.settings.sort_label }}
+        </label>
+
+        {% if block.settings.dropdown_style == 'native' %}
+          <div class="ai-sort-by-select-wrapper-{{ ai_gen_id }}">
+            <select
+              id="ai-sort-select-{{ ai_gen_id }}"
+              class="ai-sort-by-select-{{ ai_gen_id }}"
+              name="sort_by"
+            >
+              {% assign sort_by = collection.sort_by | default: collection.default_sort_by %}
+              <option value="manual" {% if sort_by == 'manual' %}selected{% endif %}>
+                {{ block.settings.option_featured }}
+              </option>
+              <option value="best-selling" {% if sort_by == 'best-selling' %}selected{% endif %}>
+                {{ block.settings.option_best_selling }}
+              </option>
+              <option value="title-ascending" {% if sort_by == 'title-ascending' %}selected{% endif %}>
+                {{ block.settings.option_alphabetically_az }}
+              </option>
+              <option value="title-descending" {% if sort_by == 'title-descending' %}selected{% endif %}>
+                {{ block.settings.option_alphabetically_za }}
+              </option>
+              <option value="price-ascending" {% if sort_by == 'price-ascending' %}selected{% endif %}>
+                {{ block.settings.option_price_low_high }}
+              </option>
+              <option value="price-descending" {% if sort_by == 'price-descending' %}selected{% endif %}>
+                {{ block.settings.option_price_high_low }}
+              </option>
+              <option value="created-descending" {% if sort_by == 'created-descending' %}selected{% endif %}>
+                {{ block.settings.option_date_new_old }}
+              </option>
+              <option value="created-ascending" {% if sort_by == 'created-ascending' %}selected{% endif %}>
+                {{ block.settings.option_date_old_new }}
+              </option>
+            </select>
+          </div>
+        {% else %}
+          <div class="ai-sort-by-custom-dropdown-{{ ai_gen_id }}">
+            <button
+              id="ai-sort-dropdown-{{ ai_gen_id }}"
+              class="ai-sort-by-dropdown-button-{{ ai_gen_id }}"
+              aria-expanded="false"
+              aria-haspopup="listbox"
+            >
+              <span class="ai-sort-by-dropdown-text-{{ ai_gen_id }}">
+                {% assign sort_by = collection.sort_by | default: collection.default_sort_by %}
+                {% case sort_by %}
+                  {% when 'best-selling' %}
+                    {{ block.settings.option_best_selling }}
+                  {% when 'title-ascending' %}
+                    {{ block.settings.option_alphabetically_az }}
+                  {% when 'title-descending' %}
+                    {{ block.settings.option_alphabetically_za }}
+                  {% when 'price-ascending' %}
+                    {{ block.settings.option_price_low_high }}
+                  {% when 'price-descending' %}
+                    {{ block.settings.option_price_high_low }}
+                  {% when 'created-descending' %}
+                    {{ block.settings.option_date_new_old }}
+                  {% when 'created-ascending' %}
+                    {{ block.settings.option_date_old_new }}
+                  {% else %}
+                    {{ block.settings.option_featured }}
+                {% endcase %}
+              </span>
+              <svg class="ai-sort-by-dropdown-arrow-{{ ai_gen_id }}" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="6,9 12,15 18,9"></polyline>
+              </svg>
+            </button>
+
+            <div class="ai-sort-by-dropdown-menu-{{ ai_gen_id }}" role="listbox"><button
+                class="ai-sort-by-dropdown-option-{{ ai_gen_id }} {% if sort_by == 'manual' %}selected{% endif %}"
+                data-value="manual"
+                role="option"
+                aria-selected="{% if sort_by == 'manual' %}true{% else %}false{% endif %}"
+              >
+                {{ block.settings.option_featured }}
+              </button>
+              <button
+                class="ai-sort-by-dropdown-option-{{ ai_gen_id }} {% if sort_by == 'best-selling' %}selected{% endif %}"
+                data-value="best-selling"
+                role="option"
+                aria-selected="{% if sort_by == 'best-selling' %}true{% else %}false{% endif %}"
+              >
+                {{ block.settings.option_best_selling }}
+              </button>
+              <button
+                class="ai-sort-by-dropdown-option-{{ ai_gen_id }} {% if sort_by == 'title-ascending' %}selected{% endif %}"
+                data-value="title-ascending"
+                role="option"
+                aria-selected="{% if sort_by == 'title-ascending' %}true{% else %}false{% endif %}"
+              >
+                {{ block.settings.option_alphabetically_az }}
+              </button>
+              <button
+                class="ai-sort-by-dropdown-option-{{ ai_gen_id }} {% if sort_by == 'title-descending' %}selected{% endif %}"
+                data-value="title-descending"
+                role="option"
+                aria-selected="{% if sort_by == 'title-descending' %}true{% else %}false{% endif %}"
+              >
+                {{ block.settings.option_alphabetically_za }}
+              </button>
+              <button
+                class="ai-sort-by-dropdown-option-{{ ai_gen_id }} {% if sort_by == 'price-ascending' %}selected{% endif %}"
+                data-value="price-ascending"
+                role="option"
+                aria-selected="{% if sort_by == 'price-ascending' %}true{% else %}false{% endif %}"
+              >
+                {{ block.settings.option_price_low_high }}
+              </button>
+              <button
+                class="ai-sort-by-dropdown-option-{{ ai_gen_id }} {% if sort_by == 'price-descending' %}selected{% endif %}"
+                data-value="price-descending"
+                role="option"
+                aria-selected="{% if sort_by == 'price-descending' %}true{% else %}false{% endif %}"
+              >
+                {{ block.settings.option_price_high_low }}
+              </button>
+              <button
+                class="ai-sort-by-dropdown-option-{{ ai_gen_id }} {% if sort_by == 'created-descending' %}selected{% endif %}"
+                data-value="created-descending"
+                role="option"
+                aria-selected="{% if sort_by == 'created-descending' %}true{% else %}false{% endif %}"
+              >
+                {{ block.settings.option_date_new_old }}
+              </button>
+              <button
+                class="ai-sort-by-dropdown-option-{{ ai_gen_id }} {% if sort_by == 'created-ascending' %}selected{% endif %}"
+                data-value="created-ascending"
+                role="option"
+                aria-selected="{% if sort_by == 'created-ascending' %}true{% else %}false{% endif %}"
+              >
+                {{ block.settings.option_date_old_new }}
+              </button>
+            </div>
+          </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</sort-by-section-{{ ai_gen_id }}>
+
+<script>
+  (function() {
+    class SortBySection{{ ai_gen_id }} extends HTMLElement {
+      constructor() {
+        super();
+      }
+
+      connectedCallback() {
+        this.nativeSelect = this.querySelector('#ai-sort-select-{{ ai_gen_id }}');
+        this.customDropdownButton = this.querySelector('#ai-sort-dropdown-{{ ai_gen_id }}');
+        this.customDropdownMenu = this.querySelector('.ai-sort-by-dropdown-menu-{{ ai_gen_id }}');
+        this.customDropdownOptions = this.querySelectorAll('.ai-sort-by-dropdown-option-{{ ai_gen_id }}');
+        this.dropdownText = this.querySelector('.ai-sort-by-dropdown-text-{{ ai_gen_id }}');
+        
+        this.setupEventListeners();
+      }
+
+      setupEventListeners() {
+        if (this.nativeSelect) {
+          this.nativeSelect.addEventListener('change', this.handleSortChange.bind(this));
+        }
+
+        if (this.customDropdownButton) {
+          this.customDropdownButton.addEventListener('click', this.toggleCustomDropdown.bind(this));
+          this.customDropdownButton.addEventListener('keydown', this.handleDropdownKeydown.bind(this));
+        }
+
+        if (this.customDropdownOptions) {
+          this.customDropdownOptions.forEach(option => {
+            option.addEventListener('click', this.handleCustomOptionClick.bind(this));
+            option.addEventListener('keydown', this.handleOptionKeydown.bind(this));
+          });
+        }
+
+        document.addEventListener('click', this.handleOutsideClick.bind(this));
+      }
+
+      toggleCustomDropdown(event) {
+        event.preventDefault();
+        const isExpanded = this.customDropdownButton.getAttribute('aria-expanded') === 'true';
+        
+        if (isExpanded) {
+          this.closeCustomDropdown();
+        } else {
+          this.openCustomDropdown();
+        }
+      }
+
+      openCustomDropdown() {
+        this.customDropdownButton.setAttribute('aria-expanded', 'true');
+        this.customDropdownMenu.classList.add('active');
+        
+        const selectedOption = this.customDropdownMenu.querySelector('.selected');
+        if (selectedOption) {
+          selectedOption.focus();
+        } else {
+          this.customDropdownOptions[0].focus();
+        }
+      }
+
+      closeCustomDropdown() {
+        this.customDropdownButton.setAttribute('aria-expanded', 'false');
+        this.customDropdownMenu.classList.remove('active');
+        this.customDropdownButton.focus();
+      }
+
+      handleCustomOptionClick(event) {
+        event.preventDefault();
+        const value = event.target.getAttribute('data-value');
+        const text = event.target.textContent.trim();
+        
+        this.customDropdownOptions.forEach(option => {
+          option.classList.remove('selected');
+          option.setAttribute('aria-selected', 'false');
+        });
+        
+        event.target.classList.add('selected');
+        event.target.setAttribute('aria-selected', 'true');
+        this.dropdownText.textContent = text;
+        
+        this.closeCustomDropdown();
+        this.handleSortChange({ target: { value: value } });
+      }
+
+      handleDropdownKeydown(event) {
+        switch (event.key) {
+          case 'Enter':
+          case ' ':
+            event.preventDefault();
+            this.toggleCustomDropdown(event);
+            break;
+          case 'ArrowDown':
+            event.preventDefault();
+            this.openCustomDropdown();
+            break;
+          case 'Escape':
+            this.closeCustomDropdown();
+            break;
+        }
+      }
+
+      handleOptionKeydown(event) {
+        switch (event.key) {
+          case 'Enter':
+          case ' ':
+            event.preventDefault();
+            this.handleCustomOptionClick(event);
+            break;
+          case 'ArrowDown':
+            event.preventDefault();
+            const nextOption = event.target.nextElementSibling;
+            if (nextOption) {
+              nextOption.focus();
+            }
+            break;
+          case 'ArrowUp':
+            event.preventDefault();
+            const prevOption = event.target.previousElementSibling;
+            if (prevOption) {
+              prevOption.focus();
+            } else {
+              this.customDropdownButton.focus();
+              this.closeCustomDropdown();
+            }
+            break;
+          case 'Escape':
+            this.closeCustomDropdown();
+            break;
+        }
+      }
+
+      handleOutsideClick(event) {
+        if (this.customDropdownButton && !this.contains(event.target)) {
+          this.closeCustomDropdown();
+        }
+      }
+
+      handleSortChange(event) {
+        const sortValue = event.target.value;
+        const url = new URL(window.location.href);
+        if (sortValue === 'manual') {
+          url.searchParams.delete('sort_by');
+        } else {
+          url.searchParams.set('sort_by', sortValue);
+        }
+        
+        url.searchParams.delete('page');
+        window.location.href = url.toString();
+      }
+    }
+
+    customElements.define('sort-by-section-{{ ai_gen_id }}', SortBySection{{ ai_gen_id }});
+  })();
+</script>
+
+{% schema %}
+{
+  "name": "Sort by",
+  "tag": null,
+  "settings": [
+    {
+      "type": "header",
+      "content": "Content"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_title",
+      "label": "Show title",
+      "default": true
+    },
+    {
+      "type": "text",
+      "id": "title",
+      "label": "Title",
+      "default": "Products"
+    },
+    {
+      "type": "text",
+      "id": "sort_label",
+      "label": "Sort label",
+      "default": "Sort by:"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_results_count",
+      "label": "Show results count",
+      "default": true
+    },
+    {
+      "type": "text",
+      "id": "result_text_singular",
+      "label": "Result text (singular)",
+      "default": "product"
+    },
+    {
+      "type": "text",
+      "id": "result_text_plural",
+      "label": "Result text (plural)",
+      "default": "products"
+    },
+    {
+      "type": "header",
+      "content": "Dropdown style"
+    },
+    {
+      "type": "select",
+      "id": "dropdown_style",
+      "label": "Dropdown type",
+      "options": [
+        {
+          "value": "native",
+          "label": "Native select"
+        },
+        {
+          "value": "custom",
+          "label": "Custom dropdown"
+        }
+      ],
+      "default": "custom"
+    },
+    {
+      "type": "header",
+      "content": "Sort options"
+    },
+    {
+      "type": "text",
+      "id": "option_featured",
+      "label": "Featured option text",
+      "default": "Featured"
+    },
+    {
+      "type": "text",
+      "id": "option_best_selling",
+      "label": "Best selling option text",
+      "default": "Best selling"
+    },
+    {
+      "type": "text",
+      "id": "option_alphabetically_az",
+      "label": "Alphabetically A-Z option text",
+      "default": "Alphabetically, A-Z"
+    },
+    {
+      "type": "text",
+      "id": "option_alphabetically_za",
+      "label": "Alphabetically Z-A option text",
+      "default": "Alphabetically, Z-A"
+    },
+    {
+      "type": "text",
+      "id": "option_price_low_high",
+      "label": "Price low to high option text",
+      "default": "Price, low to high"
+    },
+    {
+      "type": "text",
+      "id": "option_price_high_low",
+      "label": "Price high to low option text",
+      "default": "Price, high to low"
+    },
+    {
+      "type": "text",
+      "id": "option_date_new_old",
+      "label": "Date new to old option text",
+      "default": "Date, new to old"
+    },
+    {
+      "type": "text",
+      "id": "option_date_old_new",
+      "label": "Date old to new option text",
+      "default": "Date, old to new"
+    },
+    {
+      "type": "header",
+      "content": "Layout"
+    },
+    {
+      "type": "select",
+      "id": "mobile_layout",
+      "label": "Mobile layout",
+      "options": [
+        {
+          "value": "row",
+          "label": "Row"
+        },
+        {
+          "value": "column",
+          "label": "Column"
+        }
+      ],
+      "default": "row"
+    },
+    {
+      "type": "header",
+      "content": "Colors"
+    },
+    {
+      "type": "color",
+      "id": "background_color",
+      "label": "Background",
+      "default": "#ffffff"
+    },
+    {
+      "type": "color",
+      "id": "text_color",
+      "label": "Text",
+      "default": "#000000"
+    },
+    {
+      "type": "color",
+      "id": "border_color",
+      "label": "Border",
+      "default": "#cccccc"
+    },
+    {
+      "type": "color",
+      "id": "select_background",
+      "label": "Select background",
+      "default": "#ffffff"
+    },
+    {
+      "type": "color",
+      "id": "accent_color",
+      "label": "Accent",
+      "default": "#000000"
+    },
+    {
+      "type": "header",
+      "content": "Typography"
+    },
+    {
+      "type": "range",
+      "id": "title_size",
+      "min": 16,
+      "max": 40,
+      "step": 2,
+      "unit": "px",
+      "label": "Title size",
+      "default": 24
+    },
+    {
+      "type": "range",
+      "id": "text_size",
+      "min": 12,
+      "max": 20,
+      "step": 1,
+      "unit": "px",
+      "label": "Text size",
+      "default": 14
+    },
+    {
+      "type": "header",
+      "content": "Spacing"
+    },
+    {
+      "type": "range",
+      "id": "padding_top",
+      "min": 0,
+      "max": 100,
+      "step": 5,
+      "unit": "px",
+      "label": "Top padding",
+      "default": 20
+    },
+    {
+      "type": "range",
+      "id": "padding_bottom",
+      "min": 0,
+      "max": 100,
+      "step": 5,
+      "unit": "px",
+      "label": "Bottom padding",
+      "default": 20
+    },
+    {
+      "type": "range",
+      "id": "border_radius",
+      "min": 0,
+      "max": 20,
+      "step": 1,
+      "unit": "px",
+      "label": "Border radius",
+      "default": 4
+    }
+  ],
+  "presets": [
+    {
+      "name": "Sort by"
+    }
+  ]
+}
+{% endschema %}

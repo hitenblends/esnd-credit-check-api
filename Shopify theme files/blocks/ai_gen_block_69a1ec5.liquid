@@ -1,0 +1,365 @@
+{% doc %}
+  @prompt
+    create a braedcrumbs section if i from collection page taht time show home then collection name and then products, if i come from home page and then products that time home and products show, not working if i coming from homepage and then products and not working if i coming from collection page, if i coming from home page and then products that time your code collection name showing this is wrong please correct
+
+{% enddoc %}
+{% assign ai_gen_id = block.id | replace: '_', '' | downcase %}
+
+{% style %}
+  .ai-breadcrumbs-{{ ai_gen_id }} {
+    padding: {{ block.settings.padding_top }}px 0 {{ block.settings.padding_bottom }}px;
+    background-color: {{ block.settings.background_color }};
+    margin-top:20px;
+  }
+
+  .ai-breadcrumbs-container-{{ ai_gen_id }} {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 20px;
+  }
+
+  .ai-breadcrumbs-nav-{{ ai_gen_id }} {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: {{ block.settings.item_spacing }}px;
+    font-size: {{ block.settings.font_size }}px;
+    color: {{ block.settings.text_color }};
+  }
+
+  .ai-breadcrumbs-item-{{ ai_gen_id }} {
+    display: flex;
+    align-items: center;
+    gap: {{ block.settings.item_spacing }}px;
+  }
+
+  .ai-breadcrumbs-link-{{ ai_gen_id }} {
+    color: {{ block.settings.link_color }};
+    text-decoration: none;
+    transition: color 0.3s ease;
+  }
+
+  .ai-breadcrumbs-link-{{ ai_gen_id }}:hover {
+    color: {{ block.settings.link_hover_color }};
+    text-decoration: underline;
+  }
+
+  .ai-breadcrumbs-current-{{ ai_gen_id }} {
+    color: {{ block.settings.current_color }};
+    font-weight: {{ block.settings.current_font_weight }};
+  }
+
+  .ai-breadcrumbs-separator-{{ ai_gen_id }} {
+    color: {{ block.settings.separator_color }};
+    font-size: {{ block.settings.separator_size }}px;
+    user-select: none;
+  }
+
+  @media screen and (max-width: 749px) {
+    .ai-breadcrumbs-nav-{{ ai_gen_id }} {
+      font-size: {{ block.settings.font_size | times: 0.9 }}px;
+    }
+    
+    .ai-breadcrumbs-container-{{ ai_gen_id }} {
+      padding: 0 15px;
+    }
+  }
+{% endstyle %}
+
+<breadcrumb-navigation-{{ ai_gen_id }} class="ai-breadcrumbs-{{ ai_gen_id }}" {{ block.shopify_attributes }}>
+  <div class="ai-breadcrumbs-container-{{ ai_gen_id }}">
+    <nav class="ai-breadcrumbs-nav-{{ ai_gen_id }}" aria-label="Breadcrumb">
+      {% if template.name == 'product' %}
+        <div class="ai-breadcrumbs-item-{{ ai_gen_id }}">
+          <a href="{{ routes.root_url }}" class="ai-breadcrumbs-link-{{ ai_gen_id }}">{{ block.settings.home_text }}</a>
+        </div>
+        
+        <span class="ai-breadcrumbs-separator-{{ ai_gen_id }}" aria-hidden="true">{{ block.settings.separator_symbol }}</span>
+
+        <div class="ai-breadcrumbs-item-{{ ai_gen_id }} ai-breadcrumbs-collection-item-{{ ai_gen_id }}" style="display: none;">
+          <a href="#" class="ai-breadcrumbs-link-{{ ai_gen_id }} ai-breadcrumbs-collection-link-{{ ai_gen_id }}"></a>
+        </div>
+        
+        <span class="ai-breadcrumbs-separator-{{ ai_gen_id }} ai-breadcrumbs-collection-separator-{{ ai_gen_id }}" aria-hidden="true" style="display: none;">{{ block.settings.separator_symbol }}</span>
+        
+        <div class="ai-breadcrumbs-item-{{ ai_gen_id }}">
+          <span class="ai-breadcrumbs-current-{{ ai_gen_id }}" aria-current="page">{{ product.title }}</span>
+        </div>
+        
+      {% elsif template.name == 'collection' %}
+        <div class="ai-breadcrumbs-item-{{ ai_gen_id }}">
+          <a href="{{ routes.root_url }}" class="ai-breadcrumbs-link-{{ ai_gen_id }}">{{ block.settings.home_text }}</a>
+        </div>
+
+        <span class="ai-breadcrumbs-separator-{{ ai_gen_id }}" aria-hidden="true">{{ block.settings.separator_symbol }}</span>
+        
+        <div class="ai-breadcrumbs-item-{{ ai_gen_id }}">
+          <span class="ai-breadcrumbs-current-{{ ai_gen_id }}" aria-current="page">{{ collection.title }}</span>
+        </div>
+        
+      {% elsif template.name == 'blog' %}
+        <div class="ai-breadcrumbs-item-{{ ai_gen_id }}">
+          <a href="{{ routes.root_url }}" class="ai-breadcrumbs-link-{{ ai_gen_id }}">{{ block.settings.home_text }}</a>
+        </div>
+        
+        <span class="ai-breadcrumbs-separator-{{ ai_gen_id }}" aria-hidden="true">{{ block.settings.separator_symbol }}</span><div class="ai-breadcrumbs-item-{{ ai_gen_id }}">
+          <span class="ai-breadcrumbs-current-{{ ai_gen_id }}" aria-current="page">{{ blog.title }}</span>
+        </div>
+        
+      {% elsif template.name == 'article' %}
+        <div class="ai-breadcrumbs-item-{{ ai_gen_id }}">
+          <a href="{{ routes.root_url }}" class="ai-breadcrumbs-link-{{ ai_gen_id }}">{{ block.settings.home_text }}</a>
+        </div>
+        
+        <span class="ai-breadcrumbs-separator-{{ ai_gen_id }}" aria-hidden="true">{{ block.settings.separator_symbol }}</span>
+
+        <div class="ai-breadcrumbs-item-{{ ai_gen_id }}">
+          <a href="{{ blog.url }}" class="ai-breadcrumbs-link-{{ ai_gen_id }}">{{ blog.title }}</a>
+        </div>
+
+        <span class="ai-breadcrumbs-separator-{{ ai_gen_id }}" aria-hidden="true">{{ block.settings.separator_symbol }}</span>
+        
+        <div class="ai-breadcrumbs-item-{{ ai_gen_id }}">
+          <span class="ai-breadcrumbs-current-{{ ai_gen_id }}" aria-current="page">{{ article.title }}</span>
+        </div>
+        
+      {% elsif template.name == 'page' %}
+        <div class="ai-breadcrumbs-item-{{ ai_gen_id }}">
+          <a href="{{ routes.root_url }}" class="ai-breadcrumbs-link-{{ ai_gen_id }}">{{ block.settings.home_text }}</a>
+        </div>
+
+        <span class="ai-breadcrumbs-separator-{{ ai_gen_id }}" aria-hidden="true">{{ block.settings.separator_symbol }}</span>
+        
+        <div class="ai-breadcrumbs-item-{{ ai_gen_id }}">
+          <span class="ai-breadcrumbs-current-{{ ai_gen_id }}" aria-current="page">{{ page.title }}</span>
+        </div>
+        
+      {% elsif template.name == 'search' %}
+        <div class="ai-breadcrumbs-item-{{ ai_gen_id }}">
+          <a href="{{ routes.root_url }}" class="ai-breadcrumbs-link-{{ ai_gen_id }}">{{ block.settings.home_text }}</a>
+        </div>
+        
+        <span class="ai-breadcrumbs-separator-{{ ai_gen_id }}" aria-hidden="true">{{ block.settings.separator_symbol }}</span>
+        
+        <div class="ai-breadcrumbs-item-{{ ai_gen_id }}">
+          <span class="ai-breadcrumbs-current-{{ ai_gen_id }}" aria-current="page">Search results</span>
+        </div>
+      {% endif %}
+    </nav>
+  </div>
+</breadcrumb-navigation-{{ ai_gen_id }}>
+
+<script>
+  (function() {
+    class BreadcrumbNavigation{{ ai_gen_id }} extends HTMLElement {
+      constructor() {
+        super();
+      }
+
+      connectedCallback() {
+        if (window.location.pathname.includes('/products/')) {
+          this.handleProductBreadcrumb();
+        }
+      }
+
+      handleProductBreadcrumb() {
+        const collectionItem = this.querySelector('.ai-breadcrumbs-collection-item-{{ ai_gen_id }}');
+        const collectionSeparator = this.querySelector('.ai-breadcrumbs-collection-separator-{{ ai_gen_id }}');
+        const collectionLink = this.querySelector('.ai-breadcrumbs-collection-link-{{ ai_gen_id }}');
+        
+        if (!collectionItem || !collectionSeparator || !collectionLink) return;
+
+        const referrer = document.referrer;
+        const currentDomain = window.location.origin;
+        
+        if (referrer && referrer.startsWith(currentDomain)) {
+          const referrerPath = new URL(referrer).pathname;
+          
+          if (referrerPath.includes('/collections/')) {
+            const pathParts = referrerPath.split('/collections/')[1];
+            if (pathParts) {
+              const collectionHandle = pathParts.split('/')[0];
+              
+              if (collectionHandle && collectionHandle !== '') {
+                collectionLink.href = `/collections/${collectionHandle}`;
+                collectionLink.textContent = this.formatCollectionName(collectionHandle);
+                collectionItem.style.display = 'flex';
+                collectionSeparator.style.display = 'inline';
+              }
+            }
+          } else if (referrerPath === '/' || referrerPath === '') {
+            collectionItem.style.display = 'none';
+            collectionSeparator.style.display = 'none';
+          }
+        } else {
+          collectionItem.style.display = 'none';
+          collectionSeparator.style.display = 'none';
+        }
+      }
+
+      formatCollectionName(handle) {
+        return handle
+          .split('-')
+          .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+          .join(' ');
+      }
+    }
+
+    customElements.define('breadcrumb-navigation-{{ ai_gen_id }}', BreadcrumbNavigation{{ ai_gen_id }});
+  })();
+</script>
+
+{% schema %}
+{
+  "name": "Breadcrumbs",
+  "settings": [
+    {
+      "type": "header",
+      "content": "Content"
+    },
+    {
+      "type": "text",
+      "id": "home_text",
+      "label": "Home text",
+      "default": "Home"
+    },
+    {
+      "type": "select",
+      "id": "separator_symbol",
+      "label": "Separator",
+      "options": [
+        {
+          "value": "/",
+          "label": "/"
+        },
+        {
+          "value": ">",
+          "label": ">"
+        },
+        {
+          "value": "→",
+          "label": "→"
+        },
+        {
+          "value": "»",
+          "label": "»"
+        },
+        {
+          "value": "·",
+          "label": "·"
+        }
+      ],
+      "default": "/"
+    },
+    {
+      "type": "header",
+      "content": "Style"
+    },
+    {
+      "type": "color",
+      "id": "background_color",
+      "label": "Background color",
+      "default": "#ffffff"
+    },
+    {
+      "type": "color",
+      "id": "text_color",
+      "label": "Text color",
+      "default": "#666666"
+    },
+    {
+      "type": "color",
+      "id": "link_color",
+      "label": "Link color",
+      "default": "#333333"
+    },
+    {
+      "type": "color",
+      "id": "link_hover_color",
+      "label": "Link hover color",
+      "default": "#000000"
+    },
+    {
+      "type": "color",
+      "id": "current_color",
+      "label": "Current page color",
+      "default": "#999999"
+    },
+    {
+      "type": "color",
+      "id": "separator_color",
+      "label": "Separator color",
+      "default": "#cccccc"
+    },
+    {
+      "type": "range",
+      "id": "font_size",
+      "min": 12,
+      "max": 20,
+      "step": 1,
+      "unit": "px",
+      "label": "Font size",
+      "default": 14
+    },
+    {
+      "type": "range",
+      "id": "separator_size",
+      "min": 10,
+      "max": 18,
+      "step": 1,
+      "unit": "px",
+      "label": "Separator size",
+      "default": 14
+    },
+    {
+      "type": "range",
+      "id": "current_font_weight",
+      "min": 400,
+      "max": 700,
+      "step": 100,
+      "label": "Current page font weight",
+      "default": 500
+    },
+    {
+      "type": "range",
+      "id": "item_spacing",
+      "min": 5,
+      "max": 20,
+      "step": 1,
+      "unit": "px",
+      "label": "Item spacing",
+      "default": 8
+    },
+    {
+      "type": "header",
+      "content": "Spacing"
+    },
+    {
+      "type": "range",
+      "id": "padding_top",
+      "min": 0,
+      "max": 50,
+      "step": 2,
+      "unit": "px",
+      "label": "Padding top",
+      "default": 20
+    },
+    {
+      "type": "range",
+      "id": "padding_bottom",
+      "min": 0,
+      "max": 50,
+      "step": 2,
+      "unit": "px",
+      "label": "Padding bottom",
+      "default": 20
+    }
+  ],
+  "presets": [
+    {
+      "name": "Breadcrumbs"
+    }
+  ],
+  "tag": null
+}
+{% endschema %}

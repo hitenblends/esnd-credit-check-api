@@ -130,7 +130,7 @@ app.post('/api/credit-check', async (req, res) => {
 });
 
 // Shopify App Integration - Generate and Apply Discount Code
-app.post('/test/generate-discount', async (req, res) => {
+app.post('/proxy/generate-discount', async (req, res) => {
   try {
     const { shop, customer_id, purchase_order, cart_total, access_token } = req.body;
     
@@ -210,7 +210,7 @@ app.post('/test/generate-discount', async (req, res) => {
 });
 
 // Shopify App Integration - Apply Discount Code to Cart
-app.post('/test/apply-discount-code', async (req, res) => {
+app.post('/proxy/apply-discount-code', async (req, res) => {
   try {
     const { shop, discount_code, cart_token, access_token } = req.body;
     
@@ -402,7 +402,7 @@ app.listen(port, () => {
   console.log('✅ Available endpoints:');
   console.log('   - GET / (health check)');
   console.log('   - POST /test/creditCheck');
-  console.log('   - POST /test/generate-discount');
-  console.log('   - POST /test/apply-discount-code');
+  console.log('   - POST /proxy/generate-discount');
+  console.log('   - POST /proxy/apply-discount-code');
   console.log('   - POST /proxy/* (Shopify app proxy)');
 });

@@ -1,0 +1,387 @@
+{% doc %}
+  @prompt
+    i want to add prvious and next arrow to chnage product
+
+{% enddoc %}
+{% assign ai_gen_id = block.id | replace: '_', '' | downcase %}
+
+{% style %}
+  .ai-product-navigator-{{ ai_gen_id }} {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: {{ block.settings.padding }}px;
+    background-color: {{ block.settings.background_color }};
+    border-radius: {{ block.settings.border_radius }}px;
+    gap: 20px;
+  }
+
+  .ai-product-nav-arrow-{{ ai_gen_id }} {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: {{ block.settings.arrow_size }}px;
+    height: {{ block.settings.arrow_size }}px;
+    background-color: {{ block.settings.arrow_background }};
+    color: {{ block.settings.arrow_color }};
+    border: none;
+    border-radius: 50%;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-decoration: none;
+    flex-shrink: 0;
+  }
+
+  .ai-product-nav-arrow-{{ ai_gen_id }}:hover {
+    background-color: {{ block.settings.arrow_hover_background }};
+    color: {{ block.settings.arrow_hover_color }};
+    transform: scale(1.1);
+  }
+
+  .ai-product-nav-arrow-{{ ai_gen_id }}:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+  }
+
+  .ai-product-nav-arrow-{{ ai_gen_id }} svg {
+    width: calc({{ block.settings.arrow_size }}px * 0.5);
+    height: calc({{ block.settings.arrow_size }}px * 0.5);
+  }
+
+  .ai-product-nav-content-{{ ai_gen_id }} {
+    flex-grow: 1;
+    text-align: center;
+    min-width: 0;
+  }
+
+  .ai-product-nav-title-{{ ai_gen_id }} {
+    font-size: {{ block.settings.title_size }}px;
+    font-weight: {{ block.settings.title_weight }};
+    color: {{ block.settings.text_color }};
+    margin: 0 0 8px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .ai-product-nav-subtitle-{{ ai_gen_id }} {
+    font-size: {{ block.settings.subtitle_size }}px;
+    color: {{ block.settings.subtitle_color }};
+    margin: 0;
+  }
+
+  @media screen and (max-width: 749px) {
+    .ai-product-navigator-{{ ai_gen_id }} {
+      padding: {{ block.settings.padding | times: 0.7 }}px;
+      gap: 15px;
+    }
+
+    .ai-product-nav-arrow-{{ ai_gen_id }} {
+      width: {{ block.settings.arrow_size | times: 0.8 }}px;
+      height: {{ block.settings.arrow_size | times: 0.8 }}px;
+    }
+
+    .ai-product-nav-title-{{ ai_gen_id }} {
+      font-size: {{ block.settings.title_size | times: 0.9 }}px;
+    }
+
+    .ai-product-nav-subtitle-{{ ai_gen_id }} {
+      font-size: {{ block.settings.subtitle_size | times: 0.9 }}px;
+    }
+  }
+{% endstyle %}
+
+<product-navigator-{{ ai_gen_id }}
+  class="ai-product-navigator-{{ ai_gen_id }}"
+  data-collection-handle="{{ collection.handle }}"
+  data-current-product-id="{{ product.id }}"
+  {{ block.shopify_attributes }}
+><a
+    href="#"
+    class="ai-product-nav-arrow-{{ ai_gen_id }} ai-product-nav-prev-{{ ai_gen_id }}"
+    aria-label="Previous product"
+    data-direction="prev"
+  >
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="2"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+    >
+      <polyline points="15,18 9,12 15,6"></polyline>
+    </svg>
+  </a>
+
+  <div class="ai-product-nav-content-{{ ai_gen_id }}">
+    {% if block.settings.show_title %}
+      <h3 class="ai-product-nav-title-{{ ai_gen_id }}">{{ product.title }}</h3>
+    {% endif %}
+    {% if block.settings.show_collection_name and collection %}
+      <p class="ai-product-nav-subtitle-{{ ai_gen_id }}">{{ collection.title }}</p>
+    {% endif %}
+  </div>
+
+  <a
+    href="#"
+    class="ai-product-nav-arrow-{{ ai_gen_id }} ai-product-nav-next-{{ ai_gen_id }}"
+    aria-label="Next product"
+    data-direction="next"
+  >
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="2"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+    >
+      <polyline points="9,18 15,12 9,6"></polyline>
+    </svg>
+  </a>
+</product-navigator-{{ ai_gen_id }}>
+
+<script>
+  (function() {
+    class ProductNavigator{{ ai_gen_id }} extends HTMLElement {
+      constructor() {
+        super();
+        this.collectionHandle = this.dataset.collectionHandle;
+        this.currentProductId = parseInt(this.dataset.currentProductId);
+        this.products = [];
+        this.currentIndex = -1;
+      }
+
+      connectedCallback() {
+        this.loadCollectionProducts();
+        this.setupEventListeners();
+      }
+
+      async loadCollectionProducts() {
+        if (!this.collectionHandle) {
+          this.disableNavigation();
+          return;
+        }
+
+        try {
+          const response = await fetch(`/collections/${this.collectionHandle}/products.json?limit=250`);
+          const data = await response.json();
+          this.products = data.products;
+          this.currentIndex = this.products.findIndex(product => product.id === this.currentProductId);
+          this.updateNavigationState();
+        } catch (error) {
+          console.error('Error loading collection products:', error);
+          this.disableNavigation();
+        }
+      }
+
+      setupEventListeners() {
+        const prevButton = this.querySelector('.ai-product-nav-prev-{{ ai_gen_id }}');
+        const nextButton = this.querySelector('.ai-product-nav-next-{{ ai_gen_id }}');
+
+        prevButton.addEventListener('click', (e) => {
+          e.preventDefault();
+          this.navigateToProduct('prev');
+        });
+
+        nextButton.addEventListener('click', (e) => {
+          e.preventDefault();
+          this.navigateToProduct('next');
+        });
+      }
+
+      navigateToProduct(direction) {
+        if (this.products.length === 0 || this.currentIndex === -1) return;
+
+        let targetIndex;
+        if (direction === 'prev') {
+          targetIndex = this.currentIndex > 0 ? this.currentIndex - 1 : this.products.length - 1;
+        } else {
+          targetIndex = this.currentIndex < this.products.length - 1 ? this.currentIndex + 1 : 0;
+        }
+
+        const targetProduct = this.products[targetIndex];
+        if (targetProduct) {
+          const productUrl = this.collectionHandle 
+            ? `/collections/${this.collectionHandle}/products/${targetProduct.handle}`
+            : `/products/${targetProduct.handle}`;
+          window.location.href = productUrl;
+        }
+      }
+
+      updateNavigationState() {
+        const prevButton = this.querySelector('.ai-product-nav-prev-{{ ai_gen_id }}');
+        const nextButton = this.querySelector('.ai-product-nav-next-{{ ai_gen_id }}');
+
+        if (this.products.length <= 1) {
+          this.disableNavigation();
+          return;
+        }
+
+        prevButton.style.pointerEvents = 'auto';
+        nextButton.style.pointerEvents = 'auto';
+        prevButton.removeAttribute('disabled');
+        nextButton.removeAttribute('disabled');
+      }
+
+      disableNavigation() {
+        const prevButton = this.querySelector('.ai-product-nav-prev-{{ ai_gen_id }}');
+        const nextButton = this.querySelector('.ai-product-nav-next-{{ ai_gen_id }}');
+        
+        prevButton.style.pointerEvents = 'none';
+        nextButton.style.pointerEvents = 'none';
+        prevButton.setAttribute('disabled', 'true');
+        nextButton.setAttribute('disabled', 'true');
+      }
+    }
+
+    customElements.define('product-navigator-{{ ai_gen_id }}', ProductNavigator{{ ai_gen_id }});
+  })();
+</script>
+
+{% schema %}
+{
+  "name": "Product Navigator",
+  "tag": null,
+  "settings": [
+    {
+      "type": "header",
+      "content": "Content"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_title",
+      "label": "Show product title",
+      "default": true
+    },
+    {
+      "type": "checkbox",
+      "id": "show_collection_name",
+      "label": "Show collection name",
+      "default": true
+    },
+    {
+      "type": "header",
+      "content": "Style"
+    },
+    {
+      "type": "color",
+      "id": "background_color",
+      "label": "Background color",
+      "default": "#f8f8f8"
+    },
+    {
+      "type": "color",
+      "id": "text_color",
+      "label": "Title color",
+      "default": "#000000"
+    },
+    {
+      "type": "color",
+      "id": "subtitle_color",
+      "label": "Subtitle color",
+      "default": "#666666"
+    },
+    {
+      "type": "range",
+      "id": "padding",
+      "min": 10,
+      "max": 50,
+      "step": 5,
+      "unit": "px",
+      "label": "Padding",
+      "default": 20
+    },
+    {
+      "type": "range",
+      "id": "border_radius",
+      "min": 0,
+      "max": 30,
+      "step": 2,
+      "unit": "px",
+      "label": "Border radius",
+      "default": 8
+    },
+    {
+      "type": "header",
+      "content": "Typography"
+    },
+    {
+      "type": "range",
+      "id": "title_size",
+      "min": 12,
+      "max": 32,
+      "step": 1,
+      "unit": "px",
+      "label": "Title size",
+      "default": 18
+    },
+    {
+      "type": "range",
+      "id": "title_weight",
+      "min": 300,
+      "max": 800,
+      "step": 100,
+      "label": "Title weight",
+      "default": 600
+    },
+    {
+      "type": "range",
+      "id": "subtitle_size",
+      "min": 10,
+      "max": 20,
+      "step": 1,
+      "unit": "px",
+      "label": "Subtitle size",
+      "default": 14
+    },
+    {
+      "type": "header",
+      "content": "Arrows"
+    },
+    {
+      "type": "range",
+      "id": "arrow_size",
+      "min": 30,
+      "max": 60,
+      "step": 2,
+      "unit": "px",
+      "label": "Arrow size",
+      "default": 40
+    },
+    {
+      "type": "color",
+      "id": "arrow_background",
+      "label": "Arrow background",
+      "default": "#ffffff"
+    },
+    {
+      "type": "color",
+      "id": "arrow_color",
+      "label": "Arrow color",
+      "default": "#000000"
+    },
+    {
+      "type": "color",
+      "id": "arrow_hover_background",
+      "label": "Arrow hover background",
+      "default": "#000000"
+    },
+    {
+      "type": "color",
+      "id": "arrow_hover_color",
+      "label": "Arrow hover color",
+      "default": "#ffffff"
+    }
+  ],
+  "presets": [
+    {
+      "name": "Product Navigator"
+    }
+  ]
+}
+{% endschema %}

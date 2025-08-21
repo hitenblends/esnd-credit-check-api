@@ -124,7 +124,7 @@
     let discountApplied = false;
     
     // Your app URL - update this to match your server
-    let appUrl = '{{ app_url }}' || 'https://your-ngrok-url.ngrok-free.app';
+    let appUrl = 'https://esnd-credit-check-api.onrender.com';
 
     // Initialize when DOM is ready
     document.addEventListener('DOMContentLoaded', function() {
@@ -200,17 +200,15 @@
           cart_total: orderTotal
         });
         
-        // Call your integrated app API
-        const response = await fetch(`${appUrl}/api/credit-check`, {
+        // Call the working test API endpoint
+        const response = await fetch(`${appUrl}/test/creditCheck`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            shop: '{{ shop.permanent_domain }}',
             customer_id: customerId,
-            purchase_order: purchaseOrder,
-            cart_total: orderTotal
+            purchase_order: purchaseOrder
           })
         });
 
@@ -234,13 +232,24 @@
     }
 
     function handleCreditResponse(data) {
-      if (data.success && data.credit_approved) {
-        currentCredit = parseFloat(data.available_credit) || 0;
-        showCreditResults(data);
+      if (data.ok && data.credit_check && data.credit_check.status === 'success') {
+        // Parse credit from the old API response format
+        const availableCredit = parseFloat(data.credit_check.credit) || 0;
+        currentCredit = availableCredit;
+        
+        // Create a data object that matches the expected format
+        const creditData = {
+          customer_id: data.request_data.customer_id,
+          purchase_order: data.request_data.purchase_order,
+          available_credit: availableCredit,
+          cart_total: orderTotal
+        };
+        
+        showCreditResults(creditData);
         processCreditApplication();
       } else {
         // Show error or insufficient credit message
-        const errorMessage = data.message || 'Credit check failed. Please verify your information.';
+        const errorMessage = data.error || 'Credit check failed. Please verify your information.';
         showError(errorMessage);
       }
     }
@@ -459,82 +468,41 @@
       }
     }
     
-    // Listen for checkout button clicks to apply real discount
+    // Listen for checkout button clicks
     document.addEventListener('click', function(e) {
       if (e.target.name === 'checkout' || e.target.classList.contains('t4s-btn__checkout')) {
         if (discountApplied) {
-          e.preventDefault(); // Prevent immediate checkout
-          applyRealDiscountBeforeCheckout();
+          console.log('Credit approved - proceeding to checkout');
+          
+          // TODO: In a few hours, we'll implement real discount application here
+          // For now, allow checkout to proceed normally
+          
+          // Future implementation will include:
+          // 1. Generate discount code via /proxy/generate-discount
+          // 2. Apply discount to cart via /proxy/apply-discount-code
+          // 3. Then redirect to checkout with discount applied
         }
       }
     });
     
-    // Apply real discount before checkout
+    // TODO: Future discount application functions (to be implemented in a few hours)
+    /*
     async function applyRealDiscountBeforeCheckout() {
-      try {
-        console.log('Applying real discount before checkout');
-        
-        const discountInfo = localStorage.getItem('creditDiscount');
-        if (!discountInfo) {
-          console.error('No discount info found');
-          return;
-        }
-        
-        const discount = JSON.parse(discountInfo);
-        
-        // Generate discount code
-        const generateResponse = await fetch(`${appUrl}/api/generate-discount`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            shop: '{{ shop.permanent_domain }}',
-            customer_id: discount.customerId,
-            purchase_order: discount.purchaseOrder,
-            cart_total: discount.amount,
-            access_token: '{{ shop.access_token }}' // This will need to be set properly
-          })
-        });
-        
-        if (!generateResponse.ok) {
-          throw new Error('Failed to generate discount code');
-        }
-        
-        const generateResult = await generateResponse.json();
-        console.log('Discount code generated:', generateResult);
-        
-        // Apply discount code to cart
-        const applyResponse = await fetch(`${appUrl}/api/apply-discount-code`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            shop: '{{ shop.permanent_domain }}',
-            discount_code: generateResult.discount_code,
-            cart_token: '{{ cart.token }}', // This will need to be set properly
-            access_token: '{{ shop.access_token }}' // This will need to be set properly
-          })
-        });
-        
-        if (!applyResponse.ok) {
-          throw new Error('Failed to apply discount code');
-        }
-        
-        const applyResult = await applyResponse.json();
-        console.log('Discount code applied:', applyResult);
-        
-        // Now proceed to checkout
-        console.log('Real discount applied, proceeding to checkout');
-        
-        // Redirect to checkout
-        window.location.href = '/checkout';
-        
-      } catch (error) {
-        console.error('Failed to apply real discount:', error);
-        alert('Failed to apply discount. Please try again or contact support.');
-      }
+      // This function will be implemented later to:
+      // 1. Call /proxy/generate-discount to create Shopify discount code
+      // 2. Call /proxy/apply-discount-code to apply it to cart
+      // 3. Redirect to checkout with real discount applied
     }
+    
+    async function generateDiscountCode(customerId, purchaseOrder, cartTotal) {
+      // This function will call the new discount generation API
+      // when we implement it later
+    }
+    
+    async function applyDiscountToCart(discountCode, cartToken) {
+      // This function will apply the generated discount code
+      // to the cart when we implement it later
+    }
+    */
   </script>
 {% endif %}

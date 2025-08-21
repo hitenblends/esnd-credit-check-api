@@ -1,0 +1,338 @@
+{% doc %}
+  @prompt
+    i want to add previous and next arrow to chnage the next and previous product chnage whole url a, i want collections previous and next product not all products, arrow not working, i want fisrt code this proper works, this is not my first code first code does not have collection they works all products, i want to add only two arrow right side
+
+{% enddoc %}
+{% assign ai_gen_id = block.id | replace: '_', '' | downcase %}
+
+{% style %}
+  .ai-product-navigation-{{ ai_gen_id }} {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: {{ block.settings.arrow_gap }}px;
+    {% comment %} padding: {{ block.settings.padding }}px; {% endcomment %}
+    background-color: {{ block.settings.background_color }};
+    border-radius: {{ block.settings.border_radius }}px;
+    {% comment %} margin: {{ block.settings.margin }}px 0; {% endcomment %}
+    margin:-34px auto 0px auto !important;
+    padding-bottom:40px !important;
+    padding-top:12px !important;
+   
+  }
+
+  .ai-product-nav-arrow-{{ ai_gen_id }} {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-decoration: none;
+    color: {{ block.settings.arrow_color }};
+    padding: {{ block.settings.arrow_padding }}px;
+    border-radius: {{ block.settings.arrow_border_radius }}px;
+    background-color: {{ block.settings.arrow_background }};
+    border: 1px solid {{ block.settings.arrow_border_color }};
+    transition: all 0.3s ease;width: {{ block.settings.arrow_size }}px;
+    height: {{ block.settings.arrow_size }}px;
+    cursor: pointer;
+  }
+
+  .ai-product-nav-arrow-{{ ai_gen_id }}:hover {
+    background-color: {{ block.settings.arrow_hover_background }};
+    color: {{ block.settings.arrow_hover_color }};
+    border-color: {{ block.settings.arrow_hover_border }};
+    transform: translateY(-2px);
+  }
+
+  .ai-product-nav-arrow-{{ ai_gen_id }}.disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+    pointer-events: none;
+  }
+
+  .ai-product-nav-arrow-{{ ai_gen_id }} svg {
+    width: {{ block.settings.icon_size }}px;
+    height: {{ block.settings.icon_size }}px;flex-shrink: 0;
+  }
+
+  @media screen and (max-width: 749px) {
+    .ai-product-navigation-{{ ai_gen_id }} {
+      padding: {{ block.settings.padding | times: 0.7 }}px;
+      gap: {{ block.settings.arrow_gap | times: 0.7 }}px;
+    }
+
+    .ai-product-nav-arrow-{{ ai_gen_id }} {
+      width: {{ block.settings.arrow_size | times: 0.8 }}px;
+      height: {{ block.settings.arrow_size | times: 0.8 }}px;
+      padding: {{ block.settings.arrow_padding | times: 0.8 }}px;
+    }
+
+    .ai-product-nav-arrow-{{ ai_gen_id }} svg {
+      width: {{ block.settings.icon_size | times: 0.8 }}px;
+      height: {{ block.settings.icon_size | times: 0.8 }}px;
+    }
+  }
+{% endstyle %}
+
+{% liquid
+  assign prev_product = null
+  assign next_product = null
+  assign current_position = 0
+  assign total_products = 0
+
+  assign all_products = collections.all.products
+  assign total_products = all_products.size
+
+  for product_item in all_products
+    assign current_position = current_position | plus: 1
+    if product_item.id == product.id
+      break
+    endif
+  endfor
+
+  assign prev_index = current_position | minus: 2
+  assign next_index = current_position
+
+  if prev_index >= 0
+    assign prev_product = all_products[prev_index]
+  elsif block.settings.enable_loop and total_products > 1
+    assign last_index = total_products | minus: 1
+    assign prev_product = all_products[last_index]
+  endif
+
+  if next_index < total_products
+    assign next_product = all_products[next_index]
+  elsif block.settings.enable_loop and total_products > 1
+    assign next_product = all_products[0]
+  endif
+%}
+
+<div
+  class="ai-product-navigation-{{ ai_gen_id }}"
+  {{ block.shopify_attributes }}
+>
+  {% if prev_product %}<a
+      href="/products/{{ prev_product.handle }}"
+      class="ai-product-nav-arrow-{{ ai_gen_id }} ai-product-nav-prev-{{ ai_gen_id }}"
+      aria-label="Previous product: {{ prev_product.title }}"
+    >
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+      >
+        <polyline points="15,18 9,12 15,6"></polyline>
+      </svg>
+    </a>
+  {% else %}
+    <div class="ai-product-nav-arrow-{{ ai_gen_id }} ai-product-nav-prev-{{ ai_gen_id }} disabled">
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+      >
+        <polyline points="15,18 9,12 15,6"></polyline>
+      </svg>
+    </div>
+  {% endif %}
+
+  {% if next_product %}
+    <a
+      href="/products/{{ next_product.handle }}"
+      class="ai-product-nav-arrow-{{ ai_gen_id }} ai-product-nav-next-{{ ai_gen_id }}"
+      aria-label="Next product: {{ next_product.title }}"
+    >
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+      >
+        <polyline points="9,18 15,12 9,6"></polyline>
+      </svg>
+    </a>
+  {% else %}
+    <div class="ai-product-nav-arrow-{{ ai_gen_id }} ai-product-nav-next-{{ ai_gen_id }} disabled">
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+      >
+        <polyline points="9,18 15,12 9,6"></polyline>
+      </svg>
+    </div>
+  {% endif %}
+</div>
+
+{% schema %}
+{
+  "name": "Product navigation arrows",
+  "settings": [
+    {
+      "type": "header",
+      "content": "Navigation settings"
+    },
+    {
+      "type": "checkbox",
+      "id": "enable_loop",
+      "label": "Enable loop navigation",
+      "info": "Allow navigation to loop from last to first product and vice versa",
+      "default": true
+    },
+    {
+      "type": "header",
+      "content": "Colors"
+    },
+    {
+      "type": "color",
+      "id": "background_color",
+      "label": "Background color",
+      "default": "#ffffff"
+    },
+    {
+      "type": "color",
+      "id": "arrow_color",
+      "label": "Arrow color",
+      "default": "#000000"
+    },
+    {
+      "type": "color",
+      "id": "arrow_background",
+      "label": "Arrow background",
+      "default": "#f5f5f5"
+    },
+    {
+      "type": "color",
+      "id": "arrow_border_color",
+      "label": "Arrow border color",
+      "default": "#e0e0e0"
+    },
+    {
+      "type": "color",
+      "id": "arrow_hover_color",
+      "label": "Arrow hover color",
+      "default": "#ffffff"
+    },
+    {
+      "type": "color",
+      "id": "arrow_hover_background",
+      "label": "Arrow hover background",
+      "default": "#000000"
+    },
+    {
+      "type": "color",
+      "id": "arrow_hover_border",
+      "label": "Arrow hover border",
+      "default": "#000000"
+    },
+    {
+      "type": "header",
+      "content": "Sizing"
+    },
+    {
+      "type": "range",
+      "id": "padding",
+      "min": 0,
+      "max": 50,
+      "step": 2,
+      "unit": "px",
+      "label": "Container padding",
+      "default": 20
+    },
+    {
+      "type": "range",
+      "id": "margin",
+      "min": 0,
+      "max": 50,
+      "step": 2,
+      "unit": "px",
+      "label": "Container margin",
+      "default": 20
+    },
+    {
+      "type": "range",
+      "id": "arrow_size",
+      "min": 30,
+      "max": 60,
+      "step": 2,
+      "unit": "px",
+      "label": "Arrow button size",
+      "default": 40
+    },
+    {
+      "type": "range",
+      "id": "icon_size",
+      "min": 16,
+      "max": 32,
+      "step": 2,
+      "unit": "px",
+      "label": "Icon size",
+      "default": 20
+    },
+    {
+      "type": "range",
+      "id": "arrow_padding",
+      "min": 4,
+      "max": 16,
+      "step": 2,
+      "unit": "px",
+      "label": "Arrow padding",
+      "default": 8
+    },
+    {
+      "type": "range",
+      "id": "arrow_gap",
+      "min": 4,
+      "max": 20,
+      "step": 2,
+      "unit": "px",
+      "label": "Gap between arrows",
+      "default": 8
+    },
+    {
+      "type": "header",
+      "content": "Border radius"
+    },
+    {
+      "type": "range",
+      "id": "border_radius",
+      "min": 0,
+      "max": 20,
+      "step": 1,
+      "unit": "px",
+      "label": "Container border radius",
+      "default": 0
+    },
+    {
+      "type": "range",
+      "id": "arrow_border_radius",
+      "min": 0,
+      "max": 30,
+      "step": 1,
+      "unit": "px",
+      "label": "Arrow border radius",
+      "default": 20
+    }
+  ],
+  "presets": [
+    {
+      "name": "Product navigation arrows"
+    }
+  ],
+  "tag": null
+}
+{% endschema %}

@@ -1,0 +1,204 @@
+/*-----------------------------------------------------------------------------/
+/ Custom Theme CSS
+/-----------------------------------------------------------------------------*/
+/*---------------- Global Custom CSS -------------------*/
+{{- settings.global_css -}}
+
+/*---------------- Custom CSS for only desktop -------------------*/
+@media (min-width: 1025px) {
+  {{- settings.desktop_css -}}
+}
+
+/*---------------- Custom CSS for tablet, mobile -------------------*/
+@media (max-width: 1024px) {
+  {{- settings.tablet_mobile_css -}}
+}
+
+/*---------------- Custom CSS for only tablet -------------------*/
+@media (min-width: 768px) and (max-width: 1024px) {
+  {{- settings.tablet_css -}}
+}
+
+/*---------------- Custom CSS for only mobile -------------------*/
+@media (max-width: 767px){
+  {{- settings.mobile_css -}}
+}
+
+
+/* Header */
+.t4s-section-header__bot .t4s-container {
+  max-width: 100%;
+}
+span.t4s-pr.t4s-icon-cart__wrap svg path {
+  fill: transparent;
+  stroke: #222222;
+}
+.t4s-section-header [data-header-height2] {
+  border-top: 1px solid #e5e7eb;
+}
+@media (min-width: 1025px) {
+  .t4s-nav__ul>li>a {
+    padding: 5px 10px !important;
+    font-size: 16px !important;
+  }
+}
+
+/*Slideshow*/
+.t4s-slideshow .flickityt4s-prev-next-button .flickityt4s-button-icon {
+  fill: #fff;
+  height: 25px !important;
+}
+h3.t4s-section-title.t4s-title {
+  font-size: 48px;
+  color: #191919;
+}
+.t4s-coll-style-1 .t4s-cat-title {background-color: transparent;border: 0;}
+.t4s-collection-item .t4s-cat-title .t4s_as_title {
+  font-size: 22px;
+}
+.t4s-coll-style-1 .t4s-cate-wrapper {
+  box-shadow: none;
+  left: 0;
+  right: 0;
+  text-align: center;
+  margin: 0 auto;
+  transform: none;
+}
+.t4s-cat-content {
+  position: relative;
+  border: 1px solid #e5e5e5;
+  padding: 5px;
+  border-radius: 3px;
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* Logo list*/
+.t4s-logo-item {
+  padding: 32px;
+  border: 1px solid #e5e7eb;
+  min-height: 97px;
+  max-height: 140px;
+  width: calc(20% - 15px) !important;
+}
+
+.t4s-logo-item img {
+  height: 140px;
+  object-fit: contain;
+}
+
+.t4s-logo-item .t4s-eff.t4s-eff-none.t4s-eff-img-none {
+}
+ 
+
+.t4s-logo-item img {
+  height: 80px !important;
+  object-fit: contain;
+  position: relative !important;
+}
+
+.t4s-logo-list .t4s_ratioadapt .t4s_ratio:before,.t4s-logo-list .t4s_ratioadapt_f .t4s_ratio:before {
+  --t4s-aspect-ratio: none;
+}
+.t4s-logo-list .t4s_ratioadapt.t4s-align-items-center.t4s-row.t4s-row-cols-lg-5.t4s-row-cols-md-2.t4s-row-cols-2.t4s-g-lg-30.t4s-g-md-15.t4s-g-10 {
+  gap: 18px;
+}
+
+/* Testimonial */
+.t4s-testimonial-inner .t4s-quote-wrap{
+      max-width: 511px;
+      border: 1px solid #cacbce;
+      padding: 10px;
+}
+.t4s-quote-au-rev .t4s-quote-texts p{
+      max-width: 305px;
+      font-size: 16px;
+      margin-bottom: 85px;
+      line-height: min(calc(2em - 4px));
+      color: #000;
+}
+.t4s-quote-infors .t4s-quote-avatar {
+  border-radius: 0px;
+  margin-bottom: 0px;
+}
+.t4s-quote-infors .t4s-quote-avatar{
+  margin-inline-end: 16px;
+    width: 35%;
+    height: 256px;
+    min-width: 84px;
+    display: block;
+    background-size: contain;
+}
+.t4s-quote-infors .t4s-quote-au-rev{
+  position: relative;
+}
+.t4s-quote-au-rev .t4s-quote-author{
+  position: absolute;
+  bottom: 0px;
+  right: 0;
+  color: #000;
+  font-weight: 700;
+  font-size: 16px;
+}
+/* Collection */
+.t4s-page-section-heading .t4s-page-head:before{
+  background: transparent;
+}
+.t4s-page-section-heading .t4s-title-head{
+  color: #000;
+}
+.t4s-desc-head p{
+  color: #000;
+}
+.t4s-product .t4s-product-wrapper .t4s-product-inner {
+  max-height: 255px;
+}
+.t4s-page-head .t4s-desc-head {
+  margin-left: unset;
+  margin-right: unset;
+}
+.t4s-page-head .t4s-title-head, .t4s-page-head .t4s-desc-head p{
+  text-align: left;
+}
+.t4s-dropdown__sortby button[data-dropdown-open]{
+  border: 0;
+}
+.t4s-collection-header .t4s-dropdown__sortby{
+  justify-content: flex-end;
+  display: flex;
+}
+.t4s-collection-header>:first-child button, .t4s-collection-header>:last-child button{
+  text-transform: uppercase;
+}
+.t4s-product-title a{
+  font-size: 16px;
+  color: #191919 !important;
+  text-transform: capitalize;
+  line-height: 26px;
+  font-weight: 400;
+  letter-spacing: normal;
+}
+.t4s-product-info__inner .t4s-product-price{
+  font-size: 22px;
+  color: #191919;
+}
+.t4s-product-info__inner .t4s-price-from{
+  display: none;
+}
+.t4s-collection-header {
+  justify-content: flex-end;
+}
+.t4s-collection-header>:first-child, .t4s-collection-header>:last-child {
+  flex: 0 0 auto;
+}
+button.t4s-btn-filter svg {
+  width: 12px;
+  height: 12px;
+  margin-left: 5px;
+}
+nav.t4s-breadcrumbs {
+  display: flex;
+  font-size: 16px;
+}
+.t4s-collection-header {
+  margin: 0 40px 40px 0;
+}

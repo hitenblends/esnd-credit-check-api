@@ -1,0 +1,37 @@
+{%- liquid
+    assign bk_stts = block.settings
+-%}
+<div class="t4s-custom-tab-content">
+    {%- if bk_stts.image_1 != blank and bk_stts.url_1 != blank -%}
+        <div class="t4s-custom-tab-item">
+            <a href="{{ bk_stts.url_1 }}">
+                <img src="{{ bk_stts.image_1 | image_url: width: 300 }}" alt="{{ bk_stts.title_1 }}">
+                <span class="t4s-custom-tab-title">{{ bk_stts.title_1 }}</span>
+            </a>
+        </div>
+    {%- endif -%}
+    {%- if bk_stts.image_2 != blank and bk_stts.url_2 != blank -%}
+        <div class="t4s-custom-tab-item">
+            <a href="{{ bk_stts.url_2 }}">
+                <img src="{{ bk_stts.image_2 | image_url: width: 300 }}" alt="{{ bk_stts.title_2 }}">
+                <span class="t4s-custom-tab-title">{{ bk_stts.title_2 }}</span>
+            </a>
+        </div>
+    {%- endif -%}
+    {%- if bk_stts.image_3 != blank and bk_stts.url_3 != blank -%}
+        <div class="t4s-custom-tab-item">
+            <a href="{{ bk_stts.url_3 }}">
+                <img src="{{ bk_stts.image_3 | image_url: width: 300 }}" alt="{{ bk_stts.title_3 }}">
+                <span class="t4s-custom-tab-title">{{ bk_stts.title_3 }}</span>
+            </a>
+        </div>
+    {%- endif -%}
+    {%- if bk_stts.image_4 != blank and bk_stts.url_4 != blank -%}
+        <div class="t4s-custom-tab-item">
+            <a href="{{ bk_stts.url_4 }}">
+                <img src="{{ bk_stts.image_4 | image_url: width: 300 }}" alt="{{ bk_stts.title_4 }}">
+                <span class="t4s-custom-tab-title">{{ bk_stts.title_4 }}</span>
+            </a>
+        </div>
+    {%- endif -%}
+</div>

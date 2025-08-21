@@ -1,0 +1,124 @@
+<style>
+.t4s-image-tab-content {
+    max-width: 100%;
+    text-align: center;
+}
+.t4s-image-tab-item {
+    vertical-align: top;
+    margin: calc(var(--space-v, 10px) / 2) calc(var(--space-h, 10px) / 2);
+}
+.t4s-image-tab-img {
+    width: 100%;
+    max-width: 400px;
+    height: auto;
+    display: block;
+}
+.t4s-image-tab-title {
+    display: block;
+    margin-top: 5px;
+    text-decoration: none;
+    color: #222;
+}
+.t4s-image-tab-title:hover {
+    color: #b59677;
+}
+.t4s-layout-2 .t4s-image-tab-item {
+    width: 100%;
+}
+  .t4s-image-link {
+    display: block !important; /* Ensure the link is fully clickable */
+    position: relative; /* Prevent z-index issues */
+    z-index: 1; /* Ensure it’s above any overlays */
+}
+.t4s-image-link img {
+    pointer-events: auto !important; /* Ensure image clicks are not blocked */
+}
+@media (min-width: 992px) { /* Adjusted to match Bootstrap lg breakpoint */
+    .t4s-row-cols-lg-4 .t4s-image-tab-item { width: calc(25% - var(--space-h, 10px)); } /* 4 columns */
+    .t4s-row-cols-lg-3 .t4s-image-tab-item { width: calc(33.3333% - var(--space-h, 10px)); } /* Optional for 3 columns */
+    .t4s-row-cols-lg-2 .t4s-image-tab-item { width: calc(50% - var(--space-h, 10px)); } /* 2 columns */
+    .t4s-row-cols-lg-1 .t4s-image-tab-item { width: 100%; } /* 1 column */
+}
+@media (min-width: 768px) and (max-width: 991px) { /* md breakpoint */
+    .t4s-row-cols-md-2 .t4s-image-tab-item { width: calc(50% - var(--space-h, 10px)); } /* 2 columns */
+    .t4s-row-cols-md-1 .t4s-image-tab-item { width: 100%; } /* 1 column */
+}
+@media (max-width: 767px) { /* mb breakpoint */
+     .t4s-row-cols-md-2 .t4s-image-tab-item { width: calc(50% - var(--space-h, 10px)); }
+}
+</style>
+{%- liquid
+  assign bk_stts = block.settings
+  assign layout_des = bk_stts.layout_des | default: '1'
+  assign limit = bk_stts.limit | default: '4'
+  assign col_dk = bk_stts.col_dk | default: '4'
+  assign col_tb = bk_stts.col_tb | default: '2'
+  assign col_mb = bk_stts.col_mb | default: '1'
+  assign space_h_item = bk_stts.space_h_item | default: '10'
+  assign space_v_item = bk_stts.space_v_item | default: '10'
+  assign space_h_item_tb = bk_stts.space_h_item_tb | default: '10'
+  assign space_v_item_tb = bk_stts.space_v_item_tb | default: '10'
+  assign space_h_item_mb = bk_stts.space_h_item_mb | default: '10'
+  assign space_v_item_mb = bk_stts.space_v_item_mb | default: '10'
+  assign image_ratio = bk_stts.image_ratio | default: 'ratio_1_1'
+  if image_ratio == "ratioadapt"
+    assign imgatt = ''
+  else
+    assign imgatt = 'data-'
+  endif
+  assign image_position = bk_stts.image_position | default: 'top'
+  assign image_size = bk_stts.image_size | default: 'cover'
+  assign content_align = bk_stts.content_align | default: 'center'
+  assign nav_btn = bk_stts.nav_btn | default: false
+  assign nav_dot = bk_stts.nav_dot | default: false
+  assign btn_owl = bk_stts.btn_owl | default: 'default'
+  assign btn_shape = bk_stts.btn_shape | default: 'circle'
+  assign btn_size = bk_stts.btn_size | default: 'medium'
+  assign btn_cl = bk_stts.btn_cl | default: 'dark'
+  assign btn_vi = bk_stts.btn_vi | default: 'always'
+  assign btn_hidden_mobile = bk_stts.btn_hidden_mobile | default: false
+  assign dot_owl = bk_stts.dot_owl | default: 'default'
+  assign dots_cl = bk_stts.dots_cl | default: 'dark'
+  assign dots_round = bk_stts.dots_round | default: true
+  assign dots_hidden_mobile = bk_stts.dots_hidden_mobile | default: false
+  assign dots_space = bk_stts.dots_space | default: '10'
+  assign loop = bk_stts.loop | default: false
+  assign au_time = bk_stts.au_time | default: 0
+  assign au_hover = bk_stts.au_hover | default: true
+  if btn_owl == "outline"
+    assign arrow_icon = 1
+  else
+    assign arrow_icon = 2
+  endif
+-%}
+<div class="t4s-image-tab-content t4s_box_pr_grid t4s-products t4s-text-{{ content_align }} t4s_{{ image_ratio }} t4s_position_{{ image_position }} t4s_{{ image_size }} t4s-row t4s-row-cols-lg-{{ col_dk }} t4s-row-cols-md-{{ col_tb }} t4s-row-cols-{{ col_mb }} t4s-gx-lg-{{ space_h_item }} t4s-gy-lg-{{ space_v_item }} t4s-gx-md-{{ space_h_item_tb }} t4s-gy-md-{{ space_v_item_tb }} t4s-gx-{{ space_h_item_mb }} t4s-gy-{{ space_v_item_mb }}" style="--space-h: {{ space_h_item }}px; --space-v: {{ space_v_item }}px;">
+  {%- if layout_des == '2' -%}
+    {{ 'pre_flickityt4s.min.css' | asset_url | stylesheet_tag }}
+    {{ 't4s-slider-settings.css' | asset_url | stylesheet_tag }}
+    <div class="t4s-flicky-slider t4s_box_pr_slider {% if nav_btn %} t4s-slider-btn-style-{{ btn_owl }} t4s-slider-btn-{{ btn_shape }} t4s-slider-btn-{{ btn_size }} t4s-slider-btn-cl-{{ btn_cl }} t4s-slider-btn-vi-{{ btn_vi }} t4s-slider-btn-hidden-mobile-{{ btn_hidden_mobile }} {% endif %} {% if nav_dot %} t4s-dots-style-{{ dot_owl }} t4s-dots-cl-{{ dots_cl }} t4s-dots-round-{{ dots_round }} t4s-dots-hidden-mobile-{{ dots_hidden_mobile }} {% endif %} flickityt4s" data-flickityt4s-js='{"setPrevNextButtons":true,"arrowIcon":"{{ arrow_icon }}","imagesLoaded": 0,"adaptiveHeight": 0, "contain": 1, "groupCells": "100%", "dragThreshold" : 5, "cellAlign": "left","wrapAround": {{ loop }},"prevNextButtons": {{ nav_btn }},"percentPosition": 1,"pageDots": {{ nav_dot }}, "autoPlay" : {{ au_time | times: 1000 }}, "pauseAutoPlayOnHover" : {{ au_hover }} }' style="--space-dots: {{ dots_space }}px;">
+  {%- endif -%}
+  {%- for i in (1..limit) -%}
+    {%- assign image_key = 'image_' | append: i -%}
+    {%- assign title_key = 'title_' | append: i -%}
+    {%- assign url_key = 'url_' | append: i -%}
+   {%- if bk_stts[image_key] != blank -%}
+  <div class="t4s-col-item t4s-image-tab-item t4s-product t4s-pr-grid">
+    <div class="t4s-product-wrapper" data-cacl-slide>
+      <div class="t4s-product-inner">
+        <a class="t4s-d-block t4s-image-link" href="{{ bk_stts[url_key] | default: '#' }}" data-cacl-slide>
+          <img {{ imgatt }}src="{{ bk_stts[image_key] | image_url: width: 400 }}" alt="{{ bk_stts[title_key] | escape }}" class="t4s-image-tab-img lazyloadt4s" {{ imgatt }}data-bgset="{{ bk_stts[image_key] | image_url: width: 1 }}" data-sizes="auto" data-optimumx="2">
+        </a>
+      </div>
+      <div class="t4s-product-info">
+        <div class="t4s-product-info__inner">
+          <h3 class="t4s-image-tab-title"><a href="{{ bk_stts[url_key] | default: '#' }}">{{ bk_stts[title_key] | default: 'Image ' | append: i }}</a></h3>
+        </div>
+      </div>
+    </div>
+  </div>
+{%- endif -%}
+  {%- endfor -%}
+  {%- if layout_des == '2' -%}
+    </div>
+  {%- endif -%}
+</div>
