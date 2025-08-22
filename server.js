@@ -30,227 +30,100 @@ app.get('/auth', (req, res) => {
     return res.status(400).send('Missing shop parameter');
   }
   
+  // Generate state parameter for security
+  const state = crypto.randomBytes(16).toString('hex');
+  
+  // Store state for verification (in production, use Redis/database)
+  // For now, we'll use a simple approach
+  
   // Redirect to Shopify OAuth
-  const authUrl = `https://${shop}/admin/oauth/authorize?client_id=${process.env.SHOPIFY_API_KEY}&scope=read_products,write_products&redirect_uri=${process.env.SHOPIFY_REDIRECT_URI || 'https://92dc7964bc1d.ngrok-free.app/auth/callback'}`;
+  const authUrl = `https://${shop}/admin/oauth/authorize?client_id=${process.env.SHOPIFY_API_KEY}&scope=read_products,write_products,read_orders,write_orders,read_customers,write_customers,read_discounts,write_discounts&redirect_uri=${process.env.SHOPIFY_REDIRECT_URI}&state=${state}`;
+  
+  console.log('Redirecting to OAuth:', authUrl);
   res.redirect(authUrl);
 });
 
-app.get('/auth/callback', (req, res) => {
+app.get('/auth/callback', async (req, res) => {
   const { code, shop, state } = req.query;
   
   if (!code || !shop) {
     return res.status(400).send('Missing authorization code or shop');
   }
   
-  // Here you would exchange the code for an access token
-  // For now, just show success message
-  res.send(`
-    <html>
-      <head><title>App Installed Successfully!</title></head>
-      <body>
-        <h1>🎉 App Installed Successfully!</h1>
-        <p>Your app has been installed in <strong>${shop}</strong></p>
-        <p>You can now use the App Proxy at: <code>https://${shop}/apps/ext/*</code></p>
-        <script>
-          // Redirect back to the store admin after 3 seconds
-          setTimeout(() => {
-            window.location.href = 'https://${shop}/admin';
-          }, 3000);
-        </script>
-      </body>
-    </html>
-  `);
-});
-
-// Shopify App Integration - Credit Check with Real Cart Modification
-app.post('/api/credit-check', async (req, res) => {
   try {
-    const { shop, customer_id, purchase_order, cart_total } = req.body;
+    console.log('OAuth callback received:', { shop, hasCode: !!code, hasState: !!state });
     
-    if (!shop || !customer_id || !purchase_order || !cart_total) {
-      return res.status(400).json({ error: 'Missing required parameters' });
-    }
-
-    console.log('Credit check request:', { shop, customer_id, purchase_order, cart_total });
-
-    // Call your credit check API
-    const creditResponse = await fetch('http://54.148.31.213/api/creditCheck/', {
+    // Exchange authorization code for access token
+    const tokenResponse = await fetch(`https://${shop}/admin/oauth/access_token`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        customer_id,
-        purchase_order
+        client_id: process.env.SHOPIFY_API_KEY,
+        client_secret: process.env.SHOPIFY_API_SECRET,
+        code: code,
+        redirect_uri: process.env.SHOPIFY_REDIRECT_URI
       })
     });
 
-    if (!creditResponse.ok) {
-      throw new Error(`Credit API error: ${creditResponse.status}`);
+    if (!tokenResponse.ok) {
+      const errorText = await tokenResponse.text();
+      throw new Error(`Failed to get access token: ${tokenResponse.status} - ${errorText}`);
     }
 
-    const creditData = await creditResponse.json();
-    console.log('Credit API response:', creditData);
-
-    if (creditData.status === 'success') {
-      const availableCredit = parseFloat(creditData.credit) || 0;
-      const cartTotal = parseFloat(cart_total);
-      
-      if (availableCredit >= cartTotal) {
-        // Credit approved - return success with discount info
-        return res.json({
-          success: true,
-          credit_approved: true,
-          available_credit: availableCredit,
-          cart_total: cartTotal,
-          discount_applied: true,
-          message: 'Credit approved! Discount will be applied to cart.',
-          customer_id: customer_id,
-          purchase_order: purchase_order
-        });
-      } else {
-        return res.json({
-          success: true,
-          credit_approved: false,
-          available_credit: availableCredit,
-          cart_total: cartTotal,
-          message: `Insufficient credit. You need $${(cartTotal - availableCredit).toFixed(2)} more credit.`
-        });
-      }
-    } else {
-      return res.json({
-        success: false,
-        message: 'Credit check failed. Please verify your information.'
-      });
-    }
+    const tokenData = await tokenResponse.json();
+    const accessToken = tokenData.access_token;
+    
+    console.log('Access token obtained successfully for shop:', shop);
+    
+    // Store the access token (in production, use database)
+    // For now, we'll pass it back to the frontend
+    
+    // Redirect back to the store with access token
+    const redirectUrl = `https://${shop}/cart?access_token=${accessToken}&shop=${shop}&auth_success=true`;
+    console.log('Redirecting to:', redirectUrl);
+    res.redirect(redirectUrl);
+    
   } catch (error) {
-    console.error('Credit check error:', error);
-    res.status(500).json({ error: 'Credit check failed', details: error.message });
+    console.error('OAuth callback error:', error);
+    res.status(500).send(`
+      <html>
+        <head>
+          <title>Authentication Error</title>
+          <style>
+            body { font-family: Arial, sans-serif; padding: 40px; text-align: center; }
+            .error { background: #fee; border: 1px solid #fcc; padding: 20px; border-radius: 8px; margin: 20px 0; }
+            .retry { background: #007cba; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; display: inline-block; margin: 20px 0; }
+          </style>
+        </head>
+        <body>
+          <h1>❌ Authentication Failed</h1>
+          <div class="error">
+            <p><strong>Error:</strong> ${error.message}</p>
+            <p>Please check your app configuration and try again.</p>
+          </div>
+          <a href="/auth?shop=${shop}" class="retry">Try Again</a>
+          <script>
+            // Auto-redirect after 10 seconds
+            setTimeout(() => {
+              window.location.href = 'https://${shop}/cart';
+            }, 10000);
+          </script>
+        </body>
+      </html>
+    `);
   }
 });
+
+// Shopify App Integration - Credit Check with Real Cart Modification
+// REMOVED: This endpoint is not being used by the cart snippet
 
 // Shopify App Integration - Generate and Apply Discount Code
-app.post('/proxy/generate-discount', async (req, res) => {
-  try {
-    const { shop, customer_id, purchase_order, cart_total, access_token } = req.body;
-    
-    if (!shop || !customer_id || !purchase_order || !cart_total || !access_token) {
-      return res.status(400).json({ error: 'Missing required parameters' });
-    }
-
-    console.log('Generating discount code:', { shop, customer_id, purchase_order, cart_total });
-
-    // Generate unique discount code
-    const discountCode = `CREDIT_${customer_id.slice(-8).toUpperCase()}_${Date.now().toString(36).toUpperCase()}`;
-    
-    // Create discount code in Shopify
-    const discountData = {
-      price_rule: {
-        title: `Credit Discount - ${customer_id.slice(-8)}`,
-        target_type: 'line_item',
-        target_selection: 'all',
-        allocation_method: 'across',
-        value_type: 'fixed_amount',
-        value: `-${cart_total}`,
-        customer_selection: 'all',
-        starts_at: new Date().toISOString(),
-        ends_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(), // 24 hours
-        usage_limit: 1,
-        applies_once: true,
-        discount_codes: [{
-          code: discountCode,
-          usage_count: 0
-        }]
-      }
-    };
-
-    // Create the price rule (discount)
-    const priceRuleResponse = await fetch(`https://${shop}/admin/api/2024-01/price_rules.json`, {
-      method: 'POST',
-      headers: {
-        'X-Shopify-Access-Token': access_token,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(discountData)
-    });
-
-    if (!priceRuleResponse.ok) {
-      const errorText = await priceRuleResponse.text();
-      throw new Error(`Failed to create price rule: ${priceRuleResponse.status} - ${errorText}`);
-    }
-
-    const priceRule = await priceRuleResponse.json();
-    console.log('Price rule created:', priceRule);
-
-    // Store discount info for tracking
-    const discountInfo = {
-      discount_code: discountCode,
-      price_rule_id: priceRule.price_rule.id,
-      customer_id: customer_id,
-      purchase_order: purchase_order,
-      amount: cart_total,
-      created_at: new Date().toISOString(),
-      shop: shop
-    };
-
-    // In production, store this in a database
-    console.log('Discount info:', discountInfo);
-
-    return res.json({
-      success: true,
-      discount_code: discountCode,
-      message: 'Discount code generated successfully',
-      price_rule_id: priceRule.price_rule.id
-    });
-
-  } catch (error) {
-    console.error('Discount generation error:', error);
-    res.status(500).json({ error: 'Failed to generate discount', details: error.message });
-  }
-});
+// REMOVED: This endpoint is not being used by the cart snippet
 
 // Shopify App Integration - Apply Discount Code to Cart
-app.post('/proxy/apply-discount-code', async (req, res) => {
-  try {
-    const { shop, discount_code, cart_token, access_token } = req.body;
-    
-    if (!shop || !discount_code || !cart_token || !access_token) {
-      return res.status(400).json({ error: 'Missing required parameters' });
-    }
-
-    console.log('Applying discount code to cart:', { shop, discount_code, cart_token });
-
-    // Apply discount code to cart
-    const applyResponse = await fetch(`https://${shop}/admin/api/2024-01/carts/${cart_token}/discount_codes.json`, {
-      method: 'POST',
-      headers: {
-        'X-Shopify-Access-Token': access_token,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        discount_code: discount_code
-      })
-    });
-
-    if (!applyResponse.ok) {
-      const errorText = await applyResponse.text();
-      throw new Error(`Failed to apply discount code: ${applyResponse.status} - ${errorText}`);
-    }
-
-    const result = await applyResponse.json();
-    console.log('Discount code applied:', result);
-
-    return res.json({
-      success: true,
-      message: 'Discount code applied successfully',
-      cart: result.cart
-    });
-
-  } catch (error) {
-    console.error('Discount application error:', error);
-    res.status(500).json({ error: 'Failed to apply discount code', details: error.message });
-  }
-});
+// REMOVED: This endpoint is not being used by the cart snippet
 
 // Health check
 app.get('/', (_req, res) => res.send('ESND local proxy is running'));
@@ -373,7 +246,146 @@ app.all('/proxy/*', async (req, res) => {
       }
     }
 
-    // 4) Demo endpoint: /apps/ext/test  -> here we call any external API
+    // 4) Generate Discount Code endpoint
+    if (subpath === 'generate-discount') {
+      try {
+        const { shop, customer_id, purchase_order, cart_total, access_token } = req.body;
+        
+        if (!shop || !customer_id || !purchase_order || !cart_total || !access_token) {
+          return res.status(400).json({ error: 'Missing required parameters' });
+        }
+
+        console.log('Generating discount code:', { shop, customer_id, purchase_order, cart_total });
+
+        // Generate unique discount code
+        const discountCode = `CREDIT_${customer_id.slice(-8).toUpperCase()}_${Date.now().toString(36).toUpperCase()}`;
+        
+        // Create discount code in Shopify using Admin API
+        const discountData = {
+          price_rule: {
+            title: `Credit Discount - ${customer_id.slice(-8)}`,
+            target_type: 'line_item',
+            target_selection: 'all',
+            allocation_method: 'across',
+            value_type: 'fixed_amount',
+            value: `-${cart_total}`,
+            customer_selection: 'all',
+            starts_at: new Date().toISOString(),
+            ends_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(), // 24 hours
+            usage_limit: 1,
+            applies_once: true,
+            discount_codes: [{
+              code: discountCode,
+              usage_count: 0
+            }]
+          }
+        };
+
+        console.log('Creating price rule with data:', JSON.stringify(discountData, null, 2));
+
+        // Create the price rule (discount) using Admin API
+        const priceRuleResponse = await fetch(`https://${shop}/admin/api/2024-01/price_rules.json`, {
+          method: 'POST',
+          headers: {
+            'X-Shopify-Access-Token': access_token,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(discountData)
+        });
+
+        if (!priceRuleResponse.ok) {
+          const errorText = await priceRuleResponse.text();
+          console.error('Price rule creation failed:', errorText);
+          throw new Error(`Failed to create price rule: ${priceRuleResponse.status} - ${errorText}`);
+        }
+
+        const priceRule = await priceRuleResponse.json();
+        console.log('Price rule created successfully:', priceRule.price_rule.id);
+
+        // Store discount info for tracking (in production, use database)
+        const discountInfo = {
+          discount_code: discountCode,
+          price_rule_id: priceRule.price_rule.id,
+          customer_id: customer_id,
+          purchase_order: purchase_order,
+          amount: cart_total,
+          created_at: new Date().toISOString(),
+          shop: shop
+        };
+
+        console.log('Discount info stored:', discountInfo);
+
+        return res.json({
+          success: true,
+          discount_code: discountCode,
+          message: 'Discount code generated successfully',
+          price_rule_id: priceRule.price_rule.id
+        });
+
+      } catch (error) {
+        console.error('Discount generation error:', error);
+        res.status(500).json({ 
+          error: 'Failed to generate discount', 
+          details: error.message,
+          stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+        });
+      }
+    }
+
+    // 5) Apply Discount Code to Cart endpoint
+    if (subpath === 'apply-discount-code') {
+      try {
+        const { shop, discount_code, cart_token, access_token } = req.body;
+        
+        if (!shop || !discount_code || !cart_token || !access_token) {
+          return res.status(400).json({ error: 'Missing required parameters' });
+        }
+
+        console.log('Applying discount code to cart:', { shop, discount_code, cart_token });
+
+        // Apply discount code to cart using Storefront API
+        // Note: For cart modification, we need to use the Storefront API
+        // The Admin API doesn't support cart modifications directly
+        
+        // First, let's verify the discount code exists
+        const discountCheckResponse = await fetch(`https://${shop}/admin/api/2024-01/discount_codes/lookup.json?code=${discount_code}`, {
+          method: 'GET',
+          headers: {
+            'X-Shopify-Access-Token': access_token,
+            'Content-Type': 'application/json'
+          }
+        });
+
+        if (!discountCheckResponse.ok) {
+          throw new Error(`Discount code not found or invalid: ${discountCheckResponse.status}`);
+        }
+
+        const discountInfo = await discountCheckResponse.json();
+        console.log('Discount code verified:', discountInfo);
+
+        // For now, we'll return success and let the frontend handle the cart update
+        // In a full implementation, you'd use the Storefront API to modify the cart
+        // or create a custom checkout process
+        
+        return res.json({
+          success: true,
+          message: 'Discount code verified successfully',
+          discount_code: discount_code,
+          discount_info: discountInfo,
+          note: 'Discount code is valid and ready to use at checkout'
+        });
+
+      } catch (error) {
+        console.error('Discount application error:', error);
+        res.status(500).json({ 
+          error: 'Failed to apply discount code', 
+          details: error.message,
+          stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+        });
+      }
+    }
+
+    // 6) Demo endpoint: /apps/ext/test  -> here we call any external API
     if (subpath === 'test') {
       // Example public API call (replace with your real API)
       const r = await fetch('https://jsonplaceholder.typicode.com/todos/1');
@@ -401,8 +413,10 @@ app.listen(port, () => {
   console.log(`🚀 ESND Credit Check API running on port ${port}`);
   console.log('✅ Available endpoints:');
   console.log('   - GET / (health check)');
-  console.log('   - POST /test/creditCheck');
-  console.log('   - POST /proxy/generate-discount');
-  console.log('   - POST /proxy/apply-discount-code');
-  console.log('   - POST /proxy/* (Shopify app proxy)');
+  console.log('   - POST /test/creditCheck (direct testing)');
+  console.log('   - POST /proxy/creditCheck (Shopify app proxy)');
+  console.log('   - POST /proxy/generate-discount (Shopify app proxy)');
+  console.log('   - POST /proxy/apply-discount-code (Shopify app proxy)');
+  console.log('   - POST /proxy/test (Shopify app proxy demo)');
+  console.log('   - All /proxy/* endpoints require Shopify signature validation');
 });

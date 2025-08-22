@@ -125,11 +125,176 @@
     
     // Your app URL - update this to match your server
     let appUrl = 'https://esnd-credit-check-api.onrender.com';
+    
+    // OAuth flow for getting access token
+    let shopifyAccessToken = null;
 
     // Initialize when DOM is ready
     document.addEventListener('DOMContentLoaded', function() {
+      // Check for OAuth callback first
+      if (checkOAuthCallback()) {
+        // OAuth callback handled, continue with initialization
+        initializeCreditCheck();
+        return;
+      }
+      
       initializeCreditCheck();
+      checkOAuthStatus();
     });
+
+    // Check if we have OAuth access token
+    function checkOAuthStatus() {
+      // First check if we have a stored token
+      if (retrieveStoredToken()) {
+        console.log('Using stored access token');
+        enableCreditCheckForm();
+        return;
+      }
+      
+      // Check if we're in a Shopify admin context
+      if (typeof Shopify !== 'undefined' && Shopify.shop) {
+        // We're in Shopify admin - can get token via App Bridge
+        console.log('Shopify admin detected, shop:', Shopify.shop);
+        // For now, we'll need to get token from the server
+        getAccessTokenFromServer();
+      } else {
+        // We're on the storefront - need to redirect to OAuth
+        console.log('Storefront detected, need OAuth flow');
+        showOAuthPrompt();
+      }
+    }
+
+    // Get access token from server (OAuth flow)
+    async function getAccessTokenFromServer() {
+      try {
+        const shop = '{{ shop.permanent_domain }}';
+        const response = await fetch(`${appUrl}/auth?shop=${shop}`);
+        
+        if (response.ok) {
+          // This will redirect to OAuth
+          window.location.href = response.url;
+        } else {
+          throw new Error('Failed to initiate OAuth');
+        }
+      } catch (error) {
+        console.error('OAuth error:', error);
+        showOAuthPrompt();
+      }
+    }
+
+    // Show OAuth prompt for storefront users
+    function showOAuthPrompt() {
+      const form = document.getElementById('creditCheckForm');
+      if (form) {
+        const oauthPrompt = document.createElement('div');
+        oauthPrompt.className = 'oauth-prompt';
+        oauthPrompt.style.cssText = 'background: #fff3cd; border: 1px solid #ffeaa7; padding: 15px; border-radius: 4px; margin-bottom: 20px;';
+        oauthPrompt.innerHTML = `
+          <strong>🔐 Authentication Required</strong><br>
+          To use credit check features, you need to authenticate with Shopify.<br>
+          <a href="#" onclick="initiateOAuth()" style="color: #007cba; text-decoration: underline;">Click here to authenticate</a>
+        `;
+        form.insertBefore(oauthPrompt, form.firstChild);
+      }
+    }
+
+    // Initiate OAuth flow
+    function initiateOAuth() {
+      const shop = '{{ shop.permanent_domain }}';
+      const authUrl = `${appUrl}/auth?shop=${shop}`;
+      window.location.href = authUrl;
+    }
+
+    // Store access token after OAuth callback
+    function storeAccessToken(token) {
+      shopifyAccessToken = token;
+      localStorage.setItem('shopifyAccessToken', token);
+      console.log('Access token stored successfully');
+      
+      // Remove OAuth prompt if it exists
+      const oauthPrompt = document.querySelector('.oauth-prompt');
+      if (oauthPrompt) {
+        oauthPrompt.remove();
+      }
+      
+      // Enable credit check form
+      enableCreditCheckForm();
+    }
+
+    // Retrieve stored access token
+    function retrieveStoredToken() {
+      const storedToken = localStorage.getItem('shopifyAccessToken');
+      if (storedToken) {
+        shopifyAccessToken = storedToken;
+        console.log('Retrieved stored access token');
+        return true;
+      }
+      return false;
+    }
+
+    // Enable credit check form after authentication
+    function enableCreditCheckForm() {
+      const form = document.getElementById('creditCheckForm');
+      if (form) {
+        // Remove any disabled states
+        const inputs = form.querySelectorAll('input, button');
+        inputs.forEach(input => {
+          input.disabled = false;
+        });
+        
+        // Update form to show it's ready
+        const submitBtn = document.getElementById('checkCreditBtn');
+        if (submitBtn) {
+          submitBtn.textContent = 'Check Credit Availability';
+          submitBtn.style.background = '#007cba';
+        }
+      }
+    }
+
+    // Check for OAuth callback parameters
+    function checkOAuthCallback() {
+      const urlParams = new URLSearchParams(window.location.search);
+      const accessToken = urlParams.get('access_token');
+      const shop = urlParams.get('shop');
+      const authSuccess = urlParams.get('auth_success');
+      
+      if (accessToken && shop && authSuccess === 'true') {
+        console.log('OAuth callback detected, storing access token');
+        storeAccessToken(accessToken);
+        
+        // Clean up URL
+        const newUrl = window.location.pathname;
+        window.history.replaceState({}, document.title, newUrl);
+        
+        // Show success message
+        showAuthSuccessMessage();
+        
+        return true;
+      }
+      return false;
+    }
+
+    // Show authentication success message
+    function showAuthSuccessMessage() {
+      const form = document.getElementById('creditCheckForm');
+      if (form) {
+        const successMsg = document.createElement('div');
+        successMsg.className = 'auth-success-message';
+        successMsg.style.cssText = 'background: #d4edda; border: 1px solid #c3e6cb; padding: 15px; border-radius: 4px; margin-bottom: 20px; color: #155724;';
+        successMsg.innerHTML = `
+          <strong>✅ Authentication Successful!</strong><br>
+          Your Shopify app is now connected and ready to use.
+        `;
+        form.insertBefore(successMsg, form.firstChild);
+        
+        // Remove success message after 5 seconds
+        setTimeout(() => {
+          if (successMsg.parentNode) {
+            successMsg.remove();
+          }
+        }, 5000);
+      }
+    }
 
     function initializeCreditCheck() {
       // Get order total from cart
@@ -472,39 +637,161 @@
     document.addEventListener('click', function(e) {
       if (e.target.name === 'checkout' || e.target.classList.contains('t4s-btn__checkout')) {
         if (discountApplied) {
-          console.log('Credit approved - proceeding to checkout');
+          console.log('Credit approved - applying real discount before checkout');
+          e.preventDefault(); // Prevent immediate checkout
           
-          // TODO: In a few hours, we'll implement real discount application here
-          // For now, allow checkout to proceed normally
-          
-          // Future implementation will include:
-          // 1. Generate discount code via /proxy/generate-discount
-          // 2. Apply discount to cart via /proxy/apply-discount-code
-          // 3. Then redirect to checkout with discount applied
+          // Apply real discount before proceeding
+          applyRealDiscountBeforeCheckout();
         }
       }
     });
     
-    // TODO: Future discount application functions (to be implemented in a few hours)
-    /*
+    // Real discount application functions - NOW IMPLEMENTED!
     async function applyRealDiscountBeforeCheckout() {
-      // This function will be implemented later to:
-      // 1. Call /proxy/generate-discount to create Shopify discount code
-      // 2. Call /proxy/apply-discount-code to apply it to cart
-      // 3. Redirect to checkout with real discount applied
+      try {
+        console.log('Applying real discount before checkout...');
+        
+        // Show loading state
+        const checkoutBtn = document.querySelector('[name="checkout"]') || 
+                           document.querySelector('.t4s-btn__checkout') ||
+                           document.querySelector('.cart__checkout');
+        const originalText = checkoutBtn ? checkoutBtn.textContent : 'Checkout';
+        if (checkoutBtn) {
+          checkoutBtn.textContent = 'Applying Discount...';
+          checkoutBtn.disabled = true;
+        }
+        
+        // Step 1: Generate discount code
+        const discountCode = await generateDiscountCode(
+          document.getElementById('customerId').value,
+          document.getElementById('purchaseOrder').value,
+          orderTotal
+        );
+        
+        if (!discountCode) {
+          throw new Error('Failed to generate discount code');
+        }
+        
+        console.log('Discount code generated:', discountCode);
+        
+        // Step 2: Apply discount to cart
+        const success = await applyDiscountToCart(discountCode);
+        
+        if (success) {
+          console.log('Discount applied successfully, proceeding to checkout');
+          
+          // Store discount info for checkout
+          localStorage.setItem('appliedDiscountCode', discountCode);
+          
+          // Redirect to checkout
+          window.location.href = '/checkout';
+        } else {
+          throw new Error('Failed to apply discount to cart');
+        }
+        
+      } catch (error) {
+        console.error('Error applying discount:', error);
+        alert('Failed to apply discount. Please try again or contact support.');
+        
+        // Re-enable checkout button
+        if (checkoutBtn) {
+          checkoutBtn.textContent = originalText;
+          checkoutBtn.disabled = false;
+        }
+      }
     }
     
     async function generateDiscountCode(customerId, purchaseOrder, cartTotal) {
-      // This function will call the new discount generation API
-      // when we implement it later
-      // Endpoint: /proxy/generate-discount
+      try {
+        console.log('Generating discount code for:', { customerId, purchaseOrder, cartTotal });
+        
+        // Check if we have access token
+        if (!shopifyAccessToken) {
+          throw new Error('No Shopify access token available. Please authenticate first.');
+        }
+        
+        const response = await fetch(`${appUrl}/proxy/generate-discount`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            shop: '{{ shop.permanent_domain }}',
+            customer_id: customerId,
+            purchase_order: purchaseOrder,
+            cart_total: cartTotal,
+            access_token: shopifyAccessToken
+          })
+        });
+        
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        console.log('Discount generation response:', data);
+        
+        if (data.success) {
+          return data.discount_code;
+        } else {
+          throw new Error(data.message || 'Failed to generate discount code');
+        }
+        
+      } catch (error) {
+        console.error('Error generating discount:', error);
+        return null;
+      }
     }
     
-    async function applyDiscountToCart(discountCode, cartToken) {
-      // This function will apply the generated discount code
-      // to the cart when we implement it later
-      // Endpoint: /proxy/apply-discount-code
+    async function applyDiscountToCart(discountCode) {
+      try {
+        console.log('Applying discount code to cart:', discountCode);
+        
+        // Check if we have access token
+        if (!shopifyAccessToken) {
+          throw new Error('No Shopify access token available. Please authenticate first.');
+        }
+        
+        // Get cart token from Shopify
+        let cartToken = '';
+        if (typeof Shopify !== 'undefined' && Shopify.cart) {
+          cartToken = Shopify.cart.token;
+        }
+        
+        if (!cartToken) {
+          // Fallback: try to get from cart page
+          const cartTokenElement = document.querySelector('[data-cart-token]');
+          if (cartTokenElement) {
+            cartToken = cartTokenElement.getAttribute('data-cart-token');
+          }
+        }
+        
+        if (!cartToken) {
+          throw new Error('Could not get cart token');
+        }
+        
+        const response = await fetch(`${appUrl}/proxy/apply-discount-code`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            shop: '{{ shop.permanent_domain }}',
+            discount_code: discountCode,
+            cart_token: cartToken,
+            access_token: shopifyAccessToken
+          })
+        });
+        
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        console.log('Discount application response:', data);
+        
+        return data.success;
+        
+      } catch (error) {
+        console.error('Error applying discount:', error);
+        return false;
+      }
     }
-    */
   </script>
 {% endif %}
