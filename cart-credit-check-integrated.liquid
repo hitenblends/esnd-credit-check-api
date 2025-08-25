@@ -1,6 +1,7 @@
 {% comment %}
-  Cart Credit Check Snippet - Integrated with Current App
-  This snippet works with your existing server to apply real discounts
+  Cart Credit Check Snippet - Updated for Custom App
+  This snippet works with your custom app (no OAuth required)
+  Uses direct API endpoints: /test/creditCheck, /api/generate-discount, /api/apply-discount-code
 {% endcomment %}
 
 {% if customer %}
@@ -126,111 +127,19 @@
     // Your app URL - update this to match your server
     let appUrl = 'https://esnd-credit-check-api.onrender.com';
     
-    // OAuth flow for getting access token
-    let shopifyAccessToken = null;
+    // Custom app access token (no OAuth required)
+    // IMPORTANT: Replace this with your actual access token from your custom app
+    let shopifyAccessToken = 'YOUR_ACCESS_TOKEN_HERE';
 
     // Initialize when DOM is ready
     document.addEventListener('DOMContentLoaded', function() {
-      // Check for OAuth callback first
-      if (checkOAuthCallback()) {
-        // OAuth callback handled, continue with initialization
-        initializeCreditCheck();
-        return;
-      }
-      
+      // Custom app - no OAuth required, access token is already set
       initializeCreditCheck();
-      checkOAuthStatus();
+      enableCreditCheckForm(); // Enable form immediately since we have the token
     });
 
-    // Check if we have OAuth access token
-    function checkOAuthStatus() {
-      // First check if we have a stored token
-      if (retrieveStoredToken()) {
-        console.log('Using stored access token');
-        enableCreditCheckForm();
-        return;
-      }
-      
-      // Check if we're in a Shopify admin context
-      if (typeof Shopify !== 'undefined' && Shopify.shop) {
-        // We're in Shopify admin - can get token via App Bridge
-        console.log('Shopify admin detected, shop:', Shopify.shop);
-        // For now, we'll need to get token from the server
-        getAccessTokenFromServer();
-      } else {
-        // We're on the storefront - need to redirect to OAuth
-        console.log('Storefront detected, need OAuth flow');
-        showOAuthPrompt();
-      }
-    }
-
-    // Get access token from server (OAuth flow)
-    async function getAccessTokenFromServer() {
-      try {
-        const shop = '{{ shop.permanent_domain }}';
-        const response = await fetch(`${appUrl}/auth?shop=${shop}`);
-        
-        if (response.ok) {
-          // This will redirect to OAuth
-          window.location.href = response.url;
-        } else {
-          throw new Error('Failed to initiate OAuth');
-        }
-      } catch (error) {
-        console.error('OAuth error:', error);
-        showOAuthPrompt();
-      }
-    }
-
-    // Show OAuth prompt for storefront users
-    function showOAuthPrompt() {
-      const form = document.getElementById('creditCheckForm');
-      if (form) {
-        const oauthPrompt = document.createElement('div');
-        oauthPrompt.className = 'oauth-prompt';
-        oauthPrompt.style.cssText = 'background: #fff3cd; border: 1px solid #ffeaa7; padding: 15px; border-radius: 4px; margin-bottom: 20px;';
-        oauthPrompt.innerHTML = `
-          <strong>🔐 Authentication Required</strong><br>
-          To use credit check features, you need to authenticate with Shopify.<br>
-          <a href="#" onclick="initiateOAuth()" style="color: #007cba; text-decoration: underline;">Click here to authenticate</a>
-        `;
-        form.insertBefore(oauthPrompt, form.firstChild);
-      }
-    }
-
-    // Initiate OAuth flow
-    function initiateOAuth() {
-      const shop = '{{ shop.permanent_domain }}';
-      const authUrl = `${appUrl}/auth?shop=${shop}`;
-      window.location.href = authUrl;
-    }
-
-    // Store access token after OAuth callback
-    function storeAccessToken(token) {
-      shopifyAccessToken = token;
-      localStorage.setItem('shopifyAccessToken', token);
-      console.log('Access token stored successfully');
-      
-      // Remove OAuth prompt if it exists
-      const oauthPrompt = document.querySelector('.oauth-prompt');
-      if (oauthPrompt) {
-        oauthPrompt.remove();
-      }
-      
-      // Enable credit check form
-      enableCreditCheckForm();
-    }
-
-    // Retrieve stored access token
-    function retrieveStoredToken() {
-      const storedToken = localStorage.getItem('shopifyAccessToken');
-      if (storedToken) {
-        shopifyAccessToken = storedToken;
-        console.log('Retrieved stored access token');
-        return true;
-      }
-      return false;
-    }
+    // Custom app - access token is already set, no OAuth needed
+    console.log('Using custom app access token:', shopifyAccessToken.substring(0, 20) + '...');
 
     // Enable credit check form after authentication
     function enableCreditCheckForm() {
@@ -251,50 +160,8 @@
       }
     }
 
-    // Check for OAuth callback parameters
-    function checkOAuthCallback() {
-      const urlParams = new URLSearchParams(window.location.search);
-      const accessToken = urlParams.get('access_token');
-      const shop = urlParams.get('shop');
-      const authSuccess = urlParams.get('auth_success');
-      
-      if (accessToken && shop && authSuccess === 'true') {
-        console.log('OAuth callback detected, storing access token');
-        storeAccessToken(accessToken);
-        
-        // Clean up URL
-        const newUrl = window.location.pathname;
-        window.history.replaceState({}, document.title, newUrl);
-        
-        // Show success message
-        showAuthSuccessMessage();
-        
-        return true;
-      }
-      return false;
-    }
-
-    // Show authentication success message
-    function showAuthSuccessMessage() {
-      const form = document.getElementById('creditCheckForm');
-      if (form) {
-        const successMsg = document.createElement('div');
-        successMsg.className = 'auth-success-message';
-        successMsg.style.cssText = 'background: #d4edda; border: 1px solid #c3e6cb; padding: 15px; border-radius: 4px; margin-bottom: 20px; color: #155724;';
-        successMsg.innerHTML = `
-          <strong>✅ Authentication Successful!</strong><br>
-          Your Shopify app is now connected and ready to use.
-        `;
-        form.insertBefore(successMsg, form.firstChild);
-        
-        // Remove success message after 5 seconds
-        setTimeout(() => {
-          if (successMsg.parentNode) {
-            successMsg.remove();
-          }
-        }, 5000);
-      }
-    }
+    // Custom app - no OAuth callback needed
+    console.log('Custom app ready - no authentication required');
 
     function initializeCreditCheck() {
       // Get order total from cart
@@ -365,8 +232,8 @@
           cart_total: orderTotal
         });
         
-        // Call the working credit check API endpoint
-        const response = await fetch(`${appUrl}/proxy/creditCheck`, {
+        // Call the working credit check API endpoint (updated for custom app)
+        const response = await fetch(`${appUrl}/test/creditCheck`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -706,11 +573,12 @@
         console.log('Generating discount code for:', { customerId, purchaseOrder, cartTotal });
         
         // Check if we have access token
-        if (!shopifyAccessToken) {
-          throw new Error('No Shopify access token available. Please authenticate first.');
+        if (!shopifyAccessToken || shopifyAccessToken === 'YOUR_ACCESS_TOKEN_HERE') {
+          throw new Error('Please set your Shopify access token in the snippet code.');
         }
         
-        const response = await fetch(`${appUrl}/proxy/generate-discount`, {
+        // Updated to use /api/* endpoint for custom app
+        const response = await fetch(`${appUrl}/api/generate-discount`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -746,8 +614,8 @@
         console.log('Applying discount code to cart:', discountCode);
         
         // Check if we have access token
-        if (!shopifyAccessToken) {
-          throw new Error('No Shopify access token available. Please authenticate first.');
+        if (!shopifyAccessToken || shopifyAccessToken === 'YOUR_ACCESS_TOKEN_HERE') {
+          throw new Error('Please set your Shopify access token in the snippet code.');
         }
         
         // Get cart token from Shopify
@@ -768,7 +636,8 @@
           throw new Error('Could not get cart token');
         }
         
-        const response = await fetch(`${appUrl}/proxy/apply-discount-code`, {
+        // Updated to use /api/* endpoint for custom app
+        const response = await fetch(`${appUrl}/api/apply-discount-code`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
