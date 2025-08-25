@@ -1,7 +1,8 @@
 {% comment %}
-  Cart Credit Check Snippet
-  Shows credit check form below order total for logged-in customers
-  Applies 100% discount if credit covers order total
+  Cart Credit Check Snippet - Updated for Custom App
+  This snippet works with your custom app (no OAuth required)
+  Uses direct API endpoints: /test/creditCheck, /api/generate-discount, /api/apply-discount-code
+  IMPORTANT: Replace YOUR_ACCESS_TOKEN_HERE with your actual access token
 {% endcomment %}
 
 {% if customer %}
@@ -194,14 +195,15 @@
         // Update order total before making request
         updateOrderTotal();
         
-        const response = await fetch('{{ shop.url }}/apps/ext/creditCheck', {
+        const response = await fetch('https://esnd-credit-check-api.onrender.com/test/creditCheck', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
             customer_id: customerId,
-            purchase_order: purchaseOrder
+            purchase_order: purchaseOrder,
+            cart_total: orderTotal
           })
         });
 
@@ -272,25 +274,123 @@
       }
     }
 
-    function applyDiscount() {
+    async function applyDiscount() {
       if (!discountApplied) {
-        discountApplied = true;
+        try {
+          // Generate discount code first
+          const discountCode = await generateDiscountCode();
+          
+          if (discountCode) {
+            // Apply the discount code
+            const success = await applyDiscountToCart(discountCode);
+            
+            if (success) {
+              discountApplied = true;
+              
+              // Update UI to show discount applied
+              const statusDiv = document.getElementById('creditStatus');
+              statusDiv.innerHTML = `
+                <div class="discount-applied">
+                  🎉 100% Discount Code Generated: <strong>${discountCode}</strong>
+                  <br><small>This code will be automatically applied at checkout.</small>
+                </div>
+              `;
+              
+              // Enable checkout button
+              enableCheckout();
+            } else {
+              showError('Failed to apply discount. Please try again.');
+            }
+          } else {
+            showError('Failed to generate discount code. Please try again.');
+          }
+        } catch (error) {
+          console.error('Error applying discount:', error);
+          showError('Error applying discount. Please try again.');
+        }
+      }
+    }
+
+    async function generateDiscountCode() {
+      try {
+        const customerId = document.getElementById('customerId').value.trim();
+        const purchaseOrder = document.getElementById('purchaseOrder').value.trim();
         
-        // Apply discount to cart (this is a simplified example)
-        // In a real implementation, you'd need to use Shopify's cart API
-        console.log('Applying 100% discount - Credit covers order total');
+        const response = await fetch('https://esnd-credit-check-api.onrender.com/api/generate-discount', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            shop: '{{ shop.permanent_domain }}',
+            customer_id: customerId,
+            purchase_order: purchaseOrder,
+            cart_total: orderTotal,
+            access_token: 'YOUR_ACCESS_TOKEN_HERE'
+          })
+        });
+
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const data = await response.json();
         
-        // Update UI to show discount applied
-        const statusDiv = document.getElementById('creditStatus');
-        statusDiv.innerHTML = `
-          <div class="discount-applied">
-            🎉 100% Discount Applied! Your credit covers the full order amount.
-            <br><small>Proceed to checkout to complete your order.</small>
-          </div>
-        `;
+        if (data.ok && data.discount_code) {
+          return data.discount_code;
+        } else {
+          throw new Error(data.message || 'Failed to generate discount code');
+        }
+
+      } catch (error) {
+        console.error('Error generating discount:', error);
+        throw error;
+      }
+    }
+
+    async function applyDiscountToCart(discountCode) {
+      try {
+        // Get cart token from Shopify
+        let cartToken = '';
+        if (typeof Shopify !== 'undefined' && Shopify.cart) {
+          cartToken = Shopify.cart.token;
+        }
         
-        // Enable checkout button (if it was disabled)
-        enableCheckout();
+        if (!cartToken) {
+          // Fallback: try to get from cart page
+          const cartTokenElement = document.querySelector('[data-cart-token]');
+          if (cartTokenElement) {
+            cartToken = cartTokenElement.getAttribute('data-cart-token');
+          }
+        }
+        
+        if (!cartToken) {
+          throw new Error('Could not get cart token');
+        }
+
+        const response = await fetch('https://esnd-credit-check-api.onrender.com/api/apply-discount-code', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            shop: '{{ shop.permanent_domain }}',
+            discount_code: discountCode,
+            cart_token: cartToken,
+            access_token: 'YOUR_ACCESS_TOKEN_HERE'
+          })
+        });
+
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const data = await response.json();
+        return data.ok;
+
+      } catch (error) {
+        console.error('Error applying discount:', error);
+        return false;
       }
     }
 

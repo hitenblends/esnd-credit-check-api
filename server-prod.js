@@ -281,44 +281,7 @@ app.post('/api/apply-discount-code', async (req, res) => {
   }
 });
 
-// OAuth Installation endpoints
-app.get('/auth', (req, res) => {
-  const { shop } = req.query;
-  if (!shop) {
-    return res.status(400).send('Missing shop parameter');
-  }
-  
-  // Redirect to Shopify OAuth
-  const authUrl = `https://${shop}/admin/oauth/authorize?client_id=${process.env.SHOPIFY_API_KEY}&scope=read_products,write_products&redirect_uri=${process.env.SHOPIFY_REDIRECT_URI}`;
-  res.redirect(authUrl);
-});
-
-app.get('/auth/callback', (req, res) => {
-  const { code, shop, state } = req.query;
-  
-  if (!code || !shop) {
-    return res.status(400).send('Missing authorization code or shop');
-  }
-  
-  // Here you would exchange the code for an access token
-  // For now, just show success message
-  res.send(`
-    <html>
-      <head><title>App Installed Successfully!</title></head>
-      <body>
-        <h1>🎉 App Installed Successfully!</h1>
-        <p>Your app has been installed in <strong>${shop}</strong></p>
-        <p>You can now use the App Proxy at: <code>https://${shop}/apps/ext/*</code></p>
-        <script>
-          // Redirect back to the store admin after 3 seconds
-          setTimeout(() => {
-            window.location.href = 'https://${shop}/admin';
-          }, 3000);
-        </script>
-      </body>
-    </html>
-  `);
-});
+// Custom app endpoints only - no OAuth required
 
 const port = process.env.PORT || 3000;
 
@@ -327,11 +290,13 @@ app.listen(port, () => {
   console.log('✅ Available endpoints:');
   console.log('   - GET / (health check)');
   console.log('   - POST /test/creditCheck (direct testing)');
-  console.log('   - POST /api/generate-discount (direct API - no signature required)');
-  console.log('   - POST /api/apply-discount-code (direct API - no signature required)');
-  console.log('   - POST /proxy/creditCheck (Shopify app proxy)');
-  console.log('   - POST /proxy/generate-discount (Shopify app proxy)');
-  console.log('   - POST /proxy/test (Shopify app proxy demo)');
-  console.log('   - All /proxy/* endpoints require Shopify signature validation');
-  console.log('   - Use /api/* endpoints for custom app (Admin API token)');
+  console.log('   - POST /api/generate-discount (custom app - Admin API token required)');
+  console.log('   - POST /api/apply-discount-code (custom app - Admin API token required)');
+  console.log('   - POST /proxy/creditCheck (legacy app proxy - signature required)');
+  console.log('   - POST /proxy/test (legacy app proxy demo)');
+  console.log('');
+  console.log('🎯 CUSTOM APP SETUP:');
+  console.log('   - Use /api/* endpoints with your Admin API access token');
+  console.log('   - No OAuth or Partner Dashboard required');
+  console.log('   - Direct access to Shopify Admin API');
 });
