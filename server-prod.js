@@ -213,7 +213,17 @@ app.post('/api/generate-discount', async (req, res) => {
     if (!discountResponse.ok) {
       const errorData = await discountResponse.text();
       console.error('Shopify discount creation error:', errorData);
-      throw new Error(`Failed to create discount: ${discountResponse.status}`);
+      
+      // Provide more specific error messages
+      if (discountResponse.status === 401) {
+        throw new Error('Invalid access token - please check your Shopify app permissions');
+      } else if (discountResponse.status === 403) {
+        throw new Error('Insufficient permissions - app needs write_discounts scope');
+      } else if (discountResponse.status === 422) {
+        throw new Error('Invalid discount data - check discount parameters');
+      } else {
+        throw new Error(`Shopify API error: ${discountResponse.status} - ${errorData}`);
+      }
     }
 
     const discountData = await discountResponse.json();
@@ -250,24 +260,15 @@ app.post('/api/apply-discount-code', async (req, res) => {
 
     console.log('Applying discount code to cart:', { shop, discount_code, cart_token });
 
-    // Get cart details from Shopify
-    const cartResponse = await fetch(`https://${shop}/admin/api/2023-10/carts/${cart_token}.json`, {
-      headers: {
-        'X-Shopify-Access-Token': access_token
-      }
-    });
-
-    if (!cartResponse.ok) {
-      throw new Error(`Failed to get cart: ${cartResponse.status}`);
-    }
-
-    const cartData = await cartResponse.json();
-    console.log('Cart retrieved successfully:', cartData);
-
+    // In Shopify, we don't directly modify carts via Admin API
+    // Instead, we return success and let the frontend handle the discount application
+    // The discount code will be applied when the customer checks out
+    
     return res.json({
       ok: true,
-      message: 'Discount code applied successfully',
-      cart: cartData.cart
+      message: 'Discount code is ready to use at checkout',
+      discount_code: discount_code,
+      instructions: 'Customer can enter this discount code during checkout to apply the 100% discount'
     });
 
   } catch (error) {
