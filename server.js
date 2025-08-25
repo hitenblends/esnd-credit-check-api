@@ -183,6 +183,144 @@ app.post('/test/creditCheck', async (req, res) => {
   }
 });
 
+// Direct API endpoints for custom app usage (no signature required)
+app.post('/api/generate-discount', async (req, res) => {
+  try {
+    const { shop, customer_id, purchase_order, cart_total, access_token } = req.body;
+    
+    if (!shop || !customer_id || !purchase_order || !cart_total || !access_token) {
+      return res.status(400).json({ error: 'Missing required parameters' });
+    }
+
+    console.log('Generating discount code (direct API):', { shop, customer_id, purchase_order, cart_total });
+
+    // Generate unique discount code
+    const discountCode = `CREDIT_${customer_id.slice(-8).toUpperCase()}_${Date.now().toString(36).toUpperCase()}`;
+    
+    // Create discount code in Shopify using Admin API
+    const discountData = {
+      price_rule: {
+        title: `Credit Discount - ${customer_id.slice(-8)}`,
+        target_type: 'line_item',
+        target_selection: 'all',
+        allocation_method: 'across',
+        value_type: 'fixed_amount',
+        value: `-${cart_total}`,
+        customer_selection: 'all',
+        starts_at: new Date().toISOString(),
+        ends_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(), // 24 hours
+        usage_limit: 1,
+        applies_once: true,
+        discount_codes: [{
+          code: discountCode,
+          usage_count: 0
+        }]
+      }
+    };
+
+    console.log('Creating price rule with data:', JSON.stringify(discountData, null, 2));
+
+    // Create the price rule (discount) using Admin API
+    const priceRuleResponse = await fetch(`https://${shop}/admin/api/2024-01/price_rules.json`, {
+      method: 'POST',
+      headers: {
+        'X-Shopify-Access-Token': access_token,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(discountData)
+    });
+
+    if (!priceRuleResponse.ok) {
+      const errorText = await priceRuleResponse.text();
+      console.error('Price rule creation failed:', errorText);
+      throw new Error(`Failed to create price rule: ${priceRuleResponse.status} - ${errorText}`);
+    }
+
+    const priceRule = await priceRuleResponse.json();
+    console.log('Price rule created successfully:', priceRule.price_rule.id);
+
+    // Store discount info for tracking (in production, use database)
+    const discountInfo = {
+      discount_code: discountCode,
+      price_rule_id: priceRule.price_rule.id,
+      customer_id: customer_id,
+      purchase_order: purchase_order,
+      amount: cart_total,
+      created_at: new Date().toISOString(),
+      shop: shop
+    };
+
+    console.log('Discount info stored:', discountInfo);
+
+    return res.json({
+      success: true,
+      discount_code: discountCode,
+      message: 'Discount code generated successfully',
+      price_rule_id: priceRule.price_rule.id
+    });
+
+  } catch (error) {
+    console.error('Discount generation error:', error);
+    res.status(500).json({ 
+      error: 'Failed to generate discount', 
+      details: error.message,
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
+  }
+});
+
+app.post('/api/apply-discount-code', async (req, res) => {
+  try {
+    const { shop, discount_code, cart_token, access_token } = req.body;
+    
+    if (!shop || !discount_code || !cart_token || !access_token) {
+      return res.status(400).json({ error: 'Missing required parameters' });
+    }
+
+    console.log('Applying discount code to cart (direct API):', { shop, discount_code, cart_token });
+
+    // Apply discount code to cart using Storefront API
+    // Note: For cart modification, we need to use the Storefront API
+    // The Admin API doesn't support cart modifications directly
+    
+    // First, let's verify the discount code exists
+    const discountCheckResponse = await fetch(`https://${shop}/admin/api/2024-01/discount_codes/lookup.json?code=${discount_code}`, {
+      method: 'GET',
+      headers: {
+        'X-Shopify-Access-Token': access_token,
+        'Content-Type': 'application/json'
+      }
+    });
+
+    if (!discountCheckResponse.ok) {
+      throw new Error(`Discount code not found or invalid: ${discountCheckResponse.status}`);
+    }
+
+    const discountInfo = await discountCheckResponse.json();
+    console.log('Discount code verified:', discountInfo);
+
+    // For now, we'll return success and let the frontend handle the cart update
+    // In a full implementation, you'd use the Storefront API to modify the cart
+    // or create a custom checkout process
+    
+    return res.json({
+      success: true,
+      message: 'Discount code verified successfully',
+      discount_code: discount_code,
+      discount_info: discountInfo,
+      note: 'Discount code is valid and ready to use at checkout'
+    });
+
+  } catch (error) {
+    console.error('Discount application error:', error);
+    res.status(500).json({ 
+      error: 'Failed to apply discount code', 
+      details: error.message,
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
+  }
+});
+
 // App Proxy endpoint: Shopify will forward /apps/ext/* to this /proxy/*
 app.all('/proxy/*', async (req, res) => {
   try {
@@ -414,9 +552,12 @@ app.listen(port, () => {
   console.log('✅ Available endpoints:');
   console.log('   - GET / (health check)');
   console.log('   - POST /test/creditCheck (direct testing)');
+  console.log('   - POST /api/generate-discount (direct API - no signature required)');
+  console.log('   - POST /api/apply-discount-code (direct API - no signature required)');
   console.log('   - POST /proxy/creditCheck (Shopify app proxy)');
   console.log('   - POST /proxy/generate-discount (Shopify app proxy)');
   console.log('   - POST /proxy/apply-discount-code (Shopify app proxy)');
   console.log('   - POST /proxy/test (Shopify app proxy demo)');
   console.log('   - All /proxy/* endpoints require Shopify signature validation');
+  console.log('   - Use /api/* endpoints for custom app (Admin API token)');
 });
