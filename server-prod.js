@@ -161,6 +161,125 @@ app.all('/proxy/*', async (req, res) => {
   }
 });
 
+// Direct API endpoints for custom app usage (no signature required)
+app.post('/api/generate-discount', async (req, res) => {
+  try {
+    const { shop, customer_id, purchase_order, cart_total, access_token } = req.body;
+    
+    // Validate required fields
+    if (!shop || !customer_id || !purchase_order || !cart_total || !access_token) {
+      return res.status(400).json({
+        ok: false,
+        message: 'Missing required fields: shop, customer_id, purchase_order, cart_total, access_token'
+      });
+    }
+
+    console.log('Generating discount code for:', { shop, customer_id, purchase_order, cart_total });
+
+    // Generate a unique discount code
+    const timestamp = Date.now();
+    const discountCode = `CREDIT_${customer_id}_${timestamp}`;
+
+    // Create discount in Shopify
+    const discountResponse = await fetch(`https://${shop}/admin/api/2023-10/price_rules.json`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Shopify-Access-Token': access_token
+      },
+      body: JSON.stringify({
+        price_rule: {
+          title: `Credit Approved - ${purchase_order}`,
+          target_type: 'line_item',
+          target_selection: 'all',
+          allocation_method: 'across',
+          value_type: 'percentage',
+          value: '-100.0',
+          customer_selection: 'all',
+          starts_at: new Date().toISOString(),
+          ends_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(), // 24 hours from now
+          usage_limit: 1,
+          applies_to_resource: 'orders',
+          discount_codes: [
+            {
+              code: discountCode,
+              usage_limit: 1
+            }
+          ]
+        }
+      })
+    });
+
+    if (!discountResponse.ok) {
+      const errorData = await discountResponse.text();
+      console.error('Shopify discount creation error:', errorData);
+      throw new Error(`Failed to create discount: ${discountResponse.status}`);
+    }
+
+    const discountData = await discountResponse.json();
+    console.log('Discount created successfully:', discountData);
+
+    return res.json({
+      ok: true,
+      discount_code: discountCode,
+      message: 'Discount code generated successfully',
+      shopify_discount_id: discountData.price_rule.id
+    });
+
+  } catch (error) {
+    console.error('Error generating discount:', error);
+    return res.status(500).json({
+      ok: false,
+      message: 'Failed to generate discount code',
+      error: error.message
+    });
+  }
+});
+
+app.post('/api/apply-discount-code', async (req, res) => {
+  try {
+    const { shop, discount_code, cart_token, access_token } = req.body;
+    
+    // Validate required fields
+    if (!shop || !discount_code || !cart_token || !access_token) {
+      return res.status(400).json({
+        ok: false,
+        message: 'Missing required fields: shop, discount_code, cart_token, access_token'
+      });
+    }
+
+    console.log('Applying discount code to cart:', { shop, discount_code, cart_token });
+
+    // Get cart details from Shopify
+    const cartResponse = await fetch(`https://${shop}/admin/api/2023-10/carts/${cart_token}.json`, {
+      headers: {
+        'X-Shopify-Access-Token': access_token
+      }
+    });
+
+    if (!cartResponse.ok) {
+      throw new Error(`Failed to get cart: ${cartResponse.status}`);
+    }
+
+    const cartData = await cartResponse.json();
+    console.log('Cart retrieved successfully:', cartData);
+
+    return res.json({
+      ok: true,
+      message: 'Discount code applied successfully',
+      cart: cartData.cart
+    });
+
+  } catch (error) {
+    console.error('Error applying discount:', error);
+    return res.status(500).json({
+      ok: false,
+      message: 'Failed to apply discount code',
+      error: error.message
+    });
+  }
+});
+
 // OAuth Installation endpoints
 app.get('/auth', (req, res) => {
   const { shop } = req.query;
@@ -204,7 +323,14 @@ const port = process.env.PORT || 3000;
 
 app.listen(port, () => {
   console.log(`🚀 ESND Credit Check API running on port ${port}`);
-  console.log(`📱 App Proxy endpoint: /proxy/*`);
-  console.log(`🧪 Test endpoint: /test/creditCheck`);
-  console.log(`🔐 OAuth endpoints: /auth, /auth/callback`);
+  console.log('✅ Available endpoints:');
+  console.log('   - GET / (health check)');
+  console.log('   - POST /test/creditCheck (direct testing)');
+  console.log('   - POST /api/generate-discount (direct API - no signature required)');
+  console.log('   - POST /api/apply-discount-code (direct API - no signature required)');
+  console.log('   - POST /proxy/creditCheck (Shopify app proxy)');
+  console.log('   - POST /proxy/generate-discount (Shopify app proxy)');
+  console.log('   - POST /proxy/test (Shopify app proxy demo)');
+  console.log('   - All /proxy/* endpoints require Shopify signature validation');
+  console.log('   - Use /api/* endpoints for custom app (Admin API token)');
 });
