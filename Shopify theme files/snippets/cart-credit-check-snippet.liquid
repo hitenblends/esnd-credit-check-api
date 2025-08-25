@@ -223,9 +223,9 @@
     }
 
     function handleCreditResponse(data) {
-      if (data.status === 'success') {
-        currentCredit = parseFloat(data.credit) || 0;
-        showCreditResults(data);
+      if (data.ok && data.credit_check && data.credit_check.status === 'success') {
+        currentCredit = parseFloat(data.credit_check.credit) || 0;
+        showCreditResults(data.credit_check);
         processCreditApplication();
       } else {
         showError('Credit check failed. Please verify your information.');
@@ -252,7 +252,8 @@
       if (currentCredit >= orderTotal) {
         statusDiv.innerHTML = `
           <div class="credit-approved">
-            ✅ Credit Approved! Your order will be 100% discounted.
+            ✅ Credit Approved! Your order will become $0.00
+            <br><small>Credit has been applied</small>
           </div>
         `;
       } else {
@@ -268,48 +269,15 @@
 
     function processCreditApplication() {
       if (currentCredit >= orderTotal && orderTotal > 0) {
-        applyDiscount();
+        // Credit approved - enable checkout button
+        enableCheckout();
+        // Don't generate discount yet - wait for checkout click
       } else {
         removeDiscount();
       }
     }
 
-    async function applyDiscount() {
-      if (!discountApplied) {
-        try {
-          // Generate discount code first
-          const discountCode = await generateDiscountCode();
-          
-          if (discountCode) {
-            // Apply the discount code
-            const success = await applyDiscountToCart(discountCode);
-            
-            if (success) {
-              discountApplied = true;
-              
-              // Update UI to show discount applied
-              const statusDiv = document.getElementById('creditStatus');
-              statusDiv.innerHTML = `
-                <div class="discount-applied">
-                  🎉 100% Discount Code Generated: <strong>${discountCode}</strong>
-                  <br><small>This code will be automatically applied at checkout.</small>
-                </div>
-              `;
-              
-              // Enable checkout button
-              enableCheckout();
-            } else {
-              showError('Failed to apply discount. Please try again.');
-            }
-          } else {
-            showError('Failed to generate discount code. Please try again.');
-          }
-        } catch (error) {
-          console.error('Error applying discount:', error);
-          showError('Error applying discount. Please try again.');
-        }
-      }
-    }
+    // Discount generation moved to checkout button click handler
 
     async function generateDiscountCode() {
       try {
@@ -485,5 +453,62 @@
         }
       };
     }
+
+    // Add checkout button click handler for discount generation
+    document.addEventListener('DOMContentLoaded', function() {
+      // Find checkout button and add click handler
+      const checkoutBtn = document.querySelector('[name="checkout"]') || 
+                         document.querySelector('.cart__checkout') ||
+                         document.querySelector('.cart-checkout') ||
+                         document.querySelector('.t4s-btn__checkout');
+      
+      if (checkoutBtn) {
+        checkoutBtn.addEventListener('click', async function(e) {
+          // If credit is approved and discount not yet generated, generate it now
+          if (currentCredit >= orderTotal && orderTotal > 0 && !discountApplied) {
+            e.preventDefault(); // Prevent immediate checkout
+            
+            try {
+              // Show loading state
+              checkoutBtn.disabled = true;
+              checkoutBtn.textContent = 'Generating Discount...';
+              
+              // Generate and apply discount
+              const discountCode = await generateDiscountCode();
+              if (discountCode) {
+                const success = await applyDiscountToCart(discountCode);
+                if (success) {
+                  discountApplied = true;
+                  
+                  // Update UI
+                  const statusDiv = document.getElementById('creditStatus');
+                  statusDiv.innerHTML = `
+                    <div class="discount-applied">
+                      🎉 Discount Applied! Redirecting to checkout...
+                    </div>
+                  `;
+                  
+                  // Redirect to checkout after a brief delay
+                  setTimeout(() => {
+                    window.location.href = checkoutBtn.href || '/checkout';
+                  }, 1500);
+                } else {
+                  throw new Error('Failed to apply discount');
+                }
+              } else {
+                throw new Error('Failed to generate discount code');
+              }
+            } catch (error) {
+              console.error('Error applying discount:', error);
+              showError('Error applying discount. Please try again.');
+              
+              // Re-enable checkout button
+              checkoutBtn.disabled = false;
+              checkoutBtn.textContent = 'Checkout';
+            }
+          }
+        });
+      }
+    });
   </script>
 {% endif %}
