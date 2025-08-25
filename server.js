@@ -95,6 +95,94 @@ app.post('/test/creditCheck', async (req, res) => {
 });
 
 // Direct API endpoints for custom app usage (no signature required)
+
+// Simple test API for creating discount codes (easier to debug)
+app.post('/api/test-create-discount', async (req, res) => {
+  try {
+    const { shop, access_token } = req.body;
+    
+    // Validate required fields
+    if (!shop || !access_token) {
+      return res.status(400).json({
+        ok: false,
+        message: 'Missing required fields: shop, access_token'
+      });
+    }
+
+    console.log('Testing discount creation for shop:', shop);
+
+    // Generate a simple test discount code
+    const timestamp = Date.now();
+    const discountCode = `TEST_${timestamp}`;
+
+    // Create a simple 100% discount in Shopify
+    const discountResponse = await fetch(`https://${shop}/admin/api/2023-10/price_rules.json`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Shopify-Access-Token': access_token
+      },
+      body: JSON.stringify({
+        price_rule: {
+          title: `Test Discount - ${discountCode}`,
+          target_type: 'line_item',
+          target_selection: 'all',
+          allocation_method: 'across',
+          value_type: 'percentage',
+          value: '-100.0',
+          customer_selection: 'all',
+          starts_at: new Date().toISOString(),
+          ends_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(), // 7 days from now
+          usage_limit: 1,
+          applies_to_resource: 'orders',
+          discount_codes: [
+            {
+              code: discountCode,
+              usage_limit: '1'
+            }
+          ]
+        }
+      })
+    });
+
+    console.log('Shopify API response status:', discountResponse.status);
+    console.log('Shopify API response headers:', Object.fromEntries(discountResponse.headers.entries()));
+
+    if (!discountResponse.ok) {
+      const errorData = await discountResponse.text();
+      console.error('Shopify discount creation error:', errorData);
+      
+      return res.status(discountResponse.status).json({
+        ok: false,
+        message: 'Failed to create discount in Shopify',
+        error: errorData,
+        status: discountResponse.status,
+        headers: Object.fromEntries(discountResponse.headers.entries())
+      });
+    }
+
+    const discountData = await discountResponse.json();
+    console.log('Discount created successfully:', discountData);
+
+    return res.json({
+      ok: true,
+      discount_code: discountCode,
+      message: 'Test discount code created successfully! Check your Shopify admin panel.',
+      shopify_discount_id: discountData.price_rule.id,
+      shopify_response: discountData
+    });
+
+  } catch (error) {
+    console.error('Error in test discount creation:', error);
+    return res.status(500).json({
+      ok: false,
+      message: 'Failed to create test discount code',
+      error: error.message,
+      stack: error.stack
+    });
+  }
+});
+
 app.post('/api/generate-discount', async (req, res) => {
   try {
     const { shop, customer_id, purchase_order, cart_total, access_token } = req.body;
@@ -463,6 +551,7 @@ app.listen(port, () => {
   console.log('✅ Available endpoints:');
   console.log('   - GET / (health check)');
   console.log('   - POST /test/creditCheck (direct testing)');
+  console.log('   - POST /api/test-create-discount (TEST API - create discount codes)');
   console.log('   - POST /api/generate-discount (direct API - no signature required)');
   console.log('   - POST /api/apply-discount-code (direct API - no signature required)');
   console.log('   - POST /proxy/creditCheck (Shopify app proxy)');
